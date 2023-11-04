@@ -1,0 +1,41 @@
+cities:
+  London:
+    id: 1
+    latitude: 51.509865
+    longitude: -0.118092
+  Edinburgh:
+    id: 2
+    latitude: 55.953251
+    longitude: -3.188267
+  Manchester:
+    id: 3
+    latitude: 53.483959
+    longitude: -2.244644
+  Glasgow:
+    id: 4
+    latitude: 55.860916
+    longitude: -4.251433
+  Birmingham:
+    id: 5
+    latitude: 52.4814
+    longitude: -1.8998
+  Liverpool:
+    id: 6
+    latitude: 53.400002
+    longitude: -2.983333
+  Bristol:
+    id: 7
+    latitude: 51.4552
+    longitude: -2.5967
+  York:
+    id: 8
+    latitude: 53.958332
+    longitude: -1.080278
+  Oxford:
+    id: 9
+    latitude: 51.7522
+    longitude: -1.2560
+  Cardiff:
+    id: 10
+    latitude: 51.481583
+    longitude: -3.179090

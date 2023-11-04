@@ -55,7 +55,7 @@ X_test.set_index('time', inplace=True)
 
 #LOGGER.info("Loading model and performing inference on test set")
 #model = mlflow.sklearn.load_model(model_local_path)
-model = joblib.load("./training_validation/model_dir/rand.joblib")
+model = joblib.load("./training_validation/model_dir/model.joblib")
 y_pred = model.predict(X_test)
 
 #LOGGER.info("Scoring")

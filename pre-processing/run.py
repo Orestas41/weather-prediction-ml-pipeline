@@ -2,7 +2,7 @@
 Merges all available data. Performs data cleaning and saves it in W&B
 """
 # pylint: disable=E0401, W0621, C0103, R0914, R0915, E1101, C0200
-"""import os
+"""
 import pickle
 from datetime import datetime
 import argparse
@@ -13,6 +13,8 @@ from sklearn.preprocessing import LabelEncoder
 import wandb"""
 import pandas as pd
 import json
+import os
+from sklearn.preprocessing import LabelEncoder
 
 # Set up logging
 """logging.basicConfig(
@@ -117,6 +119,18 @@ def drop_duplicates(data):
     """
     return data.drop_duplicates()
 
+def sort_by_date(data):
+    """
+    Drops duplicate rows from a DataFrame.
+
+    ARGS:
+        data_frame: The DataFrame.
+
+    Returns:
+        The DataFrame with duplicate rows dropped.
+    """
+    data.index = pd.to_datetime(data.index)
+    return data.sort_index()
 
 #def go(ARGS):
 """
@@ -153,23 +167,26 @@ for dataset in os.listdir('../' + input_folder_path):
         '../' + input_folder_path, dataset), header=None))
     file_record.write(str(dataset) + '\n')"""
 
-with open('./data/new_data.json') as f:
-    data = json.load(f)
+df_merged = pd.DataFrame()
 
-data = pd.DataFrame(data['daily'])
-training_data = pd.read_csv('./data/training_data.csv')
+path_to_json = './data/raw'
+for filename in os.listdir(path_to_json):
+    if filename.endswith('.json'):
+        with open(os.path.join(path_to_json, filename), 'r') as f:
+            city_data = json.load(f)
+        data = pd.DataFrame(city_data['daily'])
+        data['city'] = city_data['city']
+        df_merged = pd.concat([df_merged, data])
 
 #LOGGER.info("Converting Date column into datetime format")
-data = convert_date_column(data)
+data = convert_date_column(df_merged)
 
 #LOGGER.info("Converting Date column into datetime format")
 data = create_month_day_column(data)
 
 # Merge the datasets
+training_data = pd.read_csv('./data/training_data.csv')
 data = merge_datasets(data, training_data)
-
-# Remove duplicate rows
-data = drop_duplicates(data)
 
 #LOGGER.info("Removeing rows with missing values")
 data = remove_na(data)
@@ -177,8 +194,17 @@ data = remove_na(data)
 # Set date as index
 data = set_date_index(data)
 
+# Sort by date
+data = sort_by_date(data)
+
+# Remove duplicate rows
+data = drop_duplicates(data)
+
+print(data.index.dtype)
+
 # Save merged datasets as one file
 data.to_csv(f'./data/training_data.csv')
+
 
 """LOGGER.info("Uploading processed_data.csv file to W&B")
 artifact = wandb.Artifact(

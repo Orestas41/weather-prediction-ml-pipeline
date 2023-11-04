@@ -9,6 +9,7 @@ import argparse
 import wandb"""
 import http.client
 import json
+import yaml
 from datetime import datetime
 
 # Setting up logging
@@ -26,15 +27,26 @@ Scrapes data from a website and saves it in a CSV file
 run.config.update(args)
 LOGGER.info("1 - Running data scrape step")
 """
+
+with open('./config.yaml', 'r') as file:
+        config = yaml.load(file, Loader=yaml.FullLoader)
+
 conn = http.client.HTTPSConnection("archive-api.open-meteo.com")
 payload = ''
 headers = {}
-conn.request("GET", f"/v1/archive?latitude=51.45&longitude=-2.58&start_date=2023-05-18&end_date=2023-10-20&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FLondon", payload, headers)
-res = conn.getresponse()
-data = res.read()
-data = json.loads(data.decode("utf-8"))
-with open(f"./data/new_data.json", "w") as write_file:
-    json.dump(data, write_file)
+
+city = config['cities']
+
+for i in city:
+    conn.request("GET", f"/v1/archive?latitude={config['cities'][i]['latitude']}&longitude={config['cities'][i]['longitude']}&start_date=2023-05-18&end_date=2023-10-20&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FLondon", payload, headers)
+    res = conn.getresponse()
+    data = res.read()
+    data = json.loads(data.decode("utf-8"))
+    data["city"] = config['cities'][i]['id']
+    with open(f"./data/raw/{i}_data.json", "w") as write_file:
+        json.dump(data, write_file)
+
+
 """
     LOGGER.info("Scraping finished")
     driver.close()"""
