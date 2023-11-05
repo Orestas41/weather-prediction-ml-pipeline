@@ -19,8 +19,9 @@ from selenium.webdriver.chrome.options import Options
 import mlflow
 import wandb"""
 import joblib
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
+import yaml
 
 # Set up logging
 """logging.basicConfig(
@@ -177,18 +178,46 @@ os.remove("../reports/tours/result.csv")
 LOGGER.info("Batch tour evaluations and predictions finished")
 driver.close()"""
 
-df = pd.read_csv('./data/clean_data.csv')
-
-recorded_data = df.loc['2023-10-12':'2023-10-18']
+df = pd.read_csv('./data/training_data.csv')
 
 predicted_data = pd.read_csv('./reports/next_week_prediction.csv')
 
-df_diff = recorded_data.compare(predicted_data)
+start = predicted_data.iloc[0]['time']
+end = predicted_data.iloc[-1]['time']
 
-print(df_diff)
+mask = (df['time'] >= start) & (df['time'] <= end)
+recorded_data = df.loc[mask]
+
+predicted_data.rename(columns={'weathercode':'predicted_weathercode','temperature_2m_max':'predicted_temperature_2m_max','temperature_2m_min':'predicted_temperature_2m_min','precipitation_sum':'predicted_precipitation_sum'}
+, inplace=True)
+
+performance = pd.merge(recorded_data, predicted_data, on='time', how='outer')
+
+#LOGGER.info("Calculating prediction error")
+performance['weathercode_performace'] = abs(
+    performance['weathercode'] - performance['predicted_weathercode'])
+
+performance['max_temp_performace'] = abs(
+    performance['temperature_2m_max'] - performance['predicted_temperature_2m_max'])
+
+performance['min_temp_performace'] = abs(
+    performance['temperature_2m_min'] - performance['predicted_temperature_2m_min'])
+
+performance['precipitation_performace'] = abs(
+    performance['precipitation_sum'] - performance['predicted_precipitation_sum'])
+
+#LOGGER.info("Saving the report on the latest tour prediction evaluations")
+performance.to_csv(
+    f"./reports/weekly_batch_prediction_performace.csv",
+    index=None)
+
+############################################################################
+
+with open('./config.yaml', 'r') as file:
+        config = yaml.load(file, Loader=yaml.FullLoader)
 
 # Create a date range for the next 7 days
-date_rng = pd.date_range(start=datetime.now(), end=datetime.now() + timedelta(days=7), freq='D')
+date_rng = pd.date_range(start=datetime.now(), end=datetime.now() + timedelta(days=7), freq='D', normalize=True)
 
 # Create a DataFrame with a date column
 df = pd.DataFrame(date_rng, columns=['time'])
@@ -197,21 +226,22 @@ df['month-day'] = df['time'].dt.strftime('%m-%d')
 df['month-day'] = pd.to_datetime(df['month-day'], format='%m-%d')
 df['month-day'] = pd.to_datetime(df['month-day']).dt.strftime('%m%d').astype(int)
 df.set_index('time', inplace=True)
+df['city'] = config['cities']['Bristol']['id']
 
-rand = joblib.load("./training_validation/model_dir/rand.joblib")
+model = joblib.load("./training_validation/model_dir/model.joblib")
 
-preds = rand.predict(df)
+preds = model.predict(df)
 
-df['weathercode'] = 0
-df['temperature_2m_max'] = 0
-df['temperature_2m_min'] = 0
-df['precipitation_sum'] = 0
+df['predicted_weathercode'] = 0
+df['predicted_temperature_2m_max'] = 0
+df['predicted_temperature_2m_min'] = 0
+df['predicted_precipitation_sum'] = 0
 
 for i in range(len(preds)):
-    df['weathercode'][i] = preds[i][0]
-    df['temperature_2m_max'][i] = preds[i][1]
-    df['temperature_2m_min'][i] = preds[i][2]
-    df['precipitation_sum'][i] = preds[i][3]
+    df['predicted_weathercode'][i] = preds[i][0]
+    df['predicted_temperature_2m_max'][i] = preds[i][1]
+    df['predicted_temperature_2m_min'][i] = preds[i][2]
+    df['predicted_precipitation_sum'][i] = preds[i][3]
 
 df.to_csv("./reports/next_week_prediction.csv")
 

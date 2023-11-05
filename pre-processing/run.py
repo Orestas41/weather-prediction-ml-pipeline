@@ -53,21 +53,6 @@ def create_month_day_column(data):
     data['month-day'] = pd.to_datetime(data['month-day']).dt.strftime('%m%d').astype(int)
     return data
 
-def convert_date_column(data):
-    """
-    Convert a date column in a DataFrame to a datetime object.
-
-    ARGS:
-        data_frame: The DataFrame.
-        format: The format of the date column.
-
-    Returns:
-        The DataFrame with the date column converted to a datetime object.
-    """
-    data['time'] = pd.to_datetime(
-        data['time'], format='%Y-%m-%d')
-    return data
-
 def set_date_index(data):
     """
     Convert a date column in a DataFrame to a datetime object.
@@ -199,8 +184,6 @@ data = sort_by_date(data)
 
 # Remove duplicate rows
 data = drop_duplicates(data)
-
-print(data.index.dtype)
 
 # Save merged datasets as one file
 data.to_csv(f'./data/training_data.csv')
