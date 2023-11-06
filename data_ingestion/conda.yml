@@ -1,0 +1,9 @@
+name: data_ingestion
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pyyaml=6.0.1
+  - pip=23.3.1
+  - pip:
+#      - wandb

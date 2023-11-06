@@ -1,0 +1,10 @@
+name: batch_prediction
+conda_env: conda.yml
+
+entry_points:
+  main:
+    parameters:
+      mlflow_model:
+        description: An MLflow serialized model
+        type: string
+    command: "python run.py --mlflow_model {mlflow_model}"

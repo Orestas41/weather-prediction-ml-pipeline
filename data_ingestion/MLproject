@@ -1,0 +1,10 @@
+name: data_ingestion
+conda_env: conda.yml
+
+entry_points:
+  main:
+    parameters:
+      step_description:
+        description: This step pull the latest data from the api
+        type: string
+    command: "python run.py --step_description {step_description}"

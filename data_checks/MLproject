@@ -1,0 +1,20 @@
+name: data_checks
+conda_env: conda.yml
+
+entry_points:
+  main:
+    parameters:
+
+      csv:
+        description: Input CSV file to be tested
+        type: string
+
+      ref:
+        description: Reference CSV file to compare the new csv to
+        type: string
+
+      kl_threshold:
+        description: Threshold for the KL divergence test on the neighborhood group column
+        type: float
+
+    command: "pytest . -vv --csv {csv} --ref {ref} --kl_threshold {kl_threshold}"

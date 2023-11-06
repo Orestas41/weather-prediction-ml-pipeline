@@ -1,0 +1,8 @@
+name: data_checks
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pandas=2.1.2
+  - pytest=7.1.1
+  - scipy

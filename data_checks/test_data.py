@@ -19,7 +19,7 @@ RUN = wandb.init(
 
 LOGGER.info("3 - Running data checks")"""
 
-data = pd.read_csv('./data/training_data.csv')
+data = pd.read_csv('../data/training_data.csv')
 
 def test_format(data):
     """

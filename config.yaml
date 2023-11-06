@@ -1,3 +1,20 @@
+main:
+  project_name: weather-prediction
+  experiment_name: development
+  steps: all
+data_check:
+  kl_threshold: 0.2
+data_segregation:
+  # Fraction of data to use for test (the remaining will be used for train and validation)
+  test_size: 0.3
+modeling:
+  # Fraction of remaining data to use for validation
+  val_size: 0.2
+  linearRegression:
+    fit_intercept: True
+    copy_X: True
+    normalize: True
+    positive: False
 cities:
   London:
     id: 1

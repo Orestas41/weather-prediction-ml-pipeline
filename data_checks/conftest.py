@@ -15,13 +15,13 @@ import pandas as pd
 LOGGER = logging.getLogger()"""
 
 
-"""def pytest_addoption(parser):
-"""
-#Add command-line options.
-"""
-parser.addoption("--csv", action="store")
-parser.addoption("--ref", action="store")
-parser.addoption("--kl_threshold", action="store", type=float)"""
+def pytest_addoption(parser):
+    """
+    Add command-line options.
+    """
+    parser.addoption("--csv", action="store")
+    parser.addoption("--ref", action="store")
+    parser.addoption("--kl_threshold", action="store", type=float)
 
 
 @pytest.fixture(scope='session')
@@ -29,7 +29,7 @@ def data(request):
     """Read the data from a CSV file."""
     #run = wandb.init(job_type="data_tests", resume=True)
     #data_path = run.use_artifact(request.config.option.csv).file()
-    data_path = './data/training_data.csv'
+    data_path = '../data/training_data.csv'
     if data_path is None:
         pytest.fail("You must provide the --csv option on the command line")
     data_frame = pd.read_csv(data_path)

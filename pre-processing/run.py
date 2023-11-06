@@ -5,12 +5,12 @@ Merges all available data. Performs data cleaning and saves it in W&B
 """
 import pickle
 from datetime import datetime
-import argparse
 import logging
 import yaml
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 import wandb"""
+import argparse
 import pandas as pd
 import json
 import os
@@ -117,90 +117,90 @@ def sort_by_date(data):
     data.index = pd.to_datetime(data.index)
     return data.sort_index()
 
-#def go(ARGS):
-"""
-Combines all data processing functions and completes data pre-processing
-"""
-"""
-# Load config.yaml and get input and output paths
-with open('../config.yaml', 'r') as file:
-    config = yaml.load(file, Loader=yaml.FullLoader)
+def go(ARGS):
+    """
+    Combines all data processing functions and completes data pre-processing
+    """
+    """
+    # Load config.yaml and get input and output paths
+    with open('../config.yaml', 'r') as file:
+        config = yaml.load(file, Loader=yaml.FullLoader)
 
-# Setting-up directory paths
-input_folder_path = config['directories']['input_folder_path']
-output_folder_path = config['directories']['output_folder_path']
+    # Setting-up directory paths
+    input_folder_path = config['directories']['input_folder_path']
+    output_folder_path = config['directories']['output_folder_path']
 
-# Setting-up ingested file recording
-file_record = open(
-    f"../reports/ingestedfiles/{datetime.now().strftime('%Y-%m-%d')}.txt",
-    "w")"""
+    # Setting-up ingested file recording
+    file_record = open(
+        f"../reports/ingestedfiles/{datetime.now().strftime('%Y-%m-%d')}.txt",
+        "w")"""
 
-# Creating instance
-"""run = wandb.init(
-    job_type="pre-processing")
-run.config.update(ARGS)
+    # Creating instance
+    """run = wandb.init(
+        job_type="pre-processing")
+    run.config.update(ARGS)
 
-LOGGER.info("2 - Running pre-processing step")
+    LOGGER.info("2 - Running pre-processing step")
 
-LOGGER.info("Merging multiple dataframes")
+    LOGGER.info("Merging multiple dataframes")
 
-# Get the datasets
-raw_data = pd.DataFrame()
-raw_datasets = []
-for dataset in os.listdir('../' + input_folder_path):
-    raw_datasets.append(pd.read_csv(os.path.join(
-        '../' + input_folder_path, dataset), header=None))
-    file_record.write(str(dataset) + '\n')"""
+    # Get the datasets
+    raw_data = pd.DataFrame()
+    raw_datasets = []
+    for dataset in os.listdir('../' + input_folder_path):
+        raw_datasets.append(pd.read_csv(os.path.join(
+            '../' + input_folder_path, dataset), header=None))
+        file_record.write(str(dataset) + '\n')"""
 
-df_merged = pd.DataFrame()
+    df_merged = pd.DataFrame()
 
-path_to_json = './data/raw'
-for filename in os.listdir(path_to_json):
-    if filename.endswith('.json'):
-        with open(os.path.join(path_to_json, filename), 'r') as f:
-            city_data = json.load(f)
-        data = pd.DataFrame(city_data['daily'])
-        data['city'] = city_data['city']
-        df_merged = pd.concat([df_merged, data])
+    path_to_json = '../data/raw'
+    for filename in os.listdir(path_to_json):
+        if filename.endswith('.json'):
+            with open(os.path.join(path_to_json, filename), 'r') as f:
+                city_data = json.load(f)
+            data = pd.DataFrame(city_data['daily'])
+            data['city'] = city_data['city']
+            df_merged = pd.concat([df_merged, data])
 
-#LOGGER.info("Converting Date column into datetime format")
-data = convert_date_column(df_merged)
+    #LOGGER.info("Converting Date column into datetime format")
+    data = convert_date_column(df_merged)
 
-#LOGGER.info("Converting Date column into datetime format")
-data = create_month_day_column(data)
+    #LOGGER.info("Converting Date column into datetime format")
+    data = create_month_day_column(data)
 
-# Merge the datasets
-training_data = pd.read_csv('./data/training_data.csv')
-data = merge_datasets(data, training_data)
+    # Merge the datasets
+    training_data = pd.read_csv('../data/training_data.csv')
+    data = merge_datasets(data, training_data)
 
-#LOGGER.info("Removeing rows with missing values")
-data = remove_na(data)
+    #LOGGER.info("Removeing rows with missing values")
+    data = remove_na(data)
 
-# Set date as index
-data = set_date_index(data)
+    # Set date as index
+    data = set_date_index(data)
 
-# Sort by date
-data = sort_by_date(data)
+    # Sort by date
+    data = sort_by_date(data)
 
-# Remove duplicate rows
-data = drop_duplicates(data)
+    # Remove duplicate rows
+    data = drop_duplicates(data)
 
-# Save merged datasets as one file
-data.to_csv(f'./data/training_data.csv')
+    # Save merged datasets as one file
+    data.to_csv(f'../data/training_data.csv')
 
 
-"""LOGGER.info("Uploading processed_data.csv file to W&B")
-artifact = wandb.Artifact(
-    ARGS.output_artifact,
-    type=ARGS.output_type,
-    description=ARGS.output_description,
-)
-artifact.add_file(f'../{output_folder_path}/processed_data.csv')
-run.log_artifact(artifact)
+    """LOGGER.info("Uploading processed_data.csv file to W&B")
+    artifact = wandb.Artifact(
+        ARGS.output_artifact,
+        type=ARGS.output_type,
+        description=ARGS.output_description,
+    )
+    artifact.add_file(f'../{output_folder_path}/processed_data.csv')
+    run.log_artifact(artifact)
 
-LOGGER.info("Successfully pre-processed the data")"""
+    LOGGER.info("Successfully pre-processed the data")"""
 
-"""
+
 if __name__ == "__main__":
 
     PARSER = argparse.ArgumentParser(
@@ -236,4 +236,4 @@ if __name__ == "__main__":
 
     ARGS = PARSER.parse_args()
 
-    go(ARGS)"""
+    go(ARGS)

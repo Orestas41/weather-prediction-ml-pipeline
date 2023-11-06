@@ -1,0 +1,14 @@
+name: batch_prediction
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+#  - mlflow=1.23.0
+#  - numpy=1.22.3
+  - scikit-learn=1.3.2
+#  - matplotlib=3.5.1
+  - pandas=2.1.2
+  - pip=23.3.1
+  - pyyaml=6.0.1
+  - pip:
+#      - wandb

@@ -2,7 +2,7 @@
 This script trains and validates the model
 """
 # pylint: disable=E0401, C0103, R0914, E1101, W0621
-"""import argparse
+"""
 import logging
 
 import shutil
@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 import mlflow
 import wandb"""
+import argparse
 import os
 import joblib
 import pandas as pd
@@ -24,89 +25,89 @@ from sklearn.metrics import mean_absolute_error
 LOGGER = logging.getLogger()"""
 
 
-#def go(ARGS):
-"""
-Train and validation the model
-"""
-"""LOGGER.info("5 - Running training and validation step")
+def go(ARGS):
+    """
+    Train and validation the model
+    """
+    """LOGGER.info("5 - Running training and validation step")
 
-run = wandb.init(
-    project="project-FootballPredict",
-    job_type="training_validation")
-run.config.update(ARGS)
+    run = wandb.init(
+        project="project-FootballPredict",
+        job_type="training_validation")
+    run.config.update(ARGS)
 
-# Getting the Linear Regression configuration and updating W&B
-with open(ARGS.model_config) as file:
-    model_config = json.load(file)
-run.config.update(model_config)
+    # Getting the Linear Regression configuration and updating W&B
+    with open(ARGS.model_config) as file:
+        model_config = json.load(file)
+    run.config.update(model_config)
 
-LOGGER.info(
-    "Fetching %s and setting it as dataframe", ARGS.trainval_artifact)
-trainval_local_path = run.use_artifact(ARGS.trainval_artifact).file()"""
+    LOGGER.info(
+        "Fetching %s and setting it as dataframe", ARGS.trainval_artifact)
+    trainval_local_path = run.use_artifact(ARGS.trainval_artifact).file()"""
 
-df = pd.read_csv('./data/trainval.csv')
+    df = pd.read_csv('../data/trainval.csv')
 
-#LOGGER.info("Setting winner column as target")
-X = df.drop(['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'], axis=1)
-y = df[['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
+    #LOGGER.info("Setting winner column as target")
+    X = df.drop(['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'], axis=1)
+    y = df[['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
 
-#LOGGER.info("Number of outcomes: %s", y.nunique())
+    #LOGGER.info("Number of outcomes: %s", y.nunique())
 
-X_train, X_val, y_train, y_val = train_test_split(
-    X, y, test_size=0.3)
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.3)
 
-X_train.set_index('time', inplace=True)
-X_val.set_index('time', inplace=True)
+    X_train.set_index('time', inplace=True)
+    X_val.set_index('time', inplace=True)
 
-#LOGGER.info("Preparing Linear Regression model")
-#model = LinearRegression(**model_config)
-model = RandomForestRegressor()
+    #LOGGER.info("Preparing Linear Regression model")
+    #model = LinearRegression(**model_config)
+    model = RandomForestRegressor()
 
-# Fitting it to the X_train, y_train data
-#LOGGER.info("Fitting")
-model.fit(X_train, y_train)
+    # Fitting it to the X_train, y_train data
+    #LOGGER.info("Fitting")
+    model.fit(X_train, y_train)
 
-# Evaluating the model
-#LOGGER.info("Scoring the model")
-r_squared = model.score(X_val, y_val)
-y_pred = model.predict(X_val)
-mae = mean_absolute_error(y_val, y_pred)
+    # Evaluating the model
+    #LOGGER.info("Scoring the model")
+    r_squared = model.score(X_val, y_val)
+    y_pred = model.predict(X_val)
+    mae = mean_absolute_error(y_val, y_pred)
 
-#LOGGER.info("Score: %s", r_squared)
-#LOGGER.info("MAE: %s", mae)
+    #LOGGER.info("Score: %s", r_squared)
+    #LOGGER.info("MAE: %s", mae)
 
-#LOGGER.info("Exporting model")
-"""if os.path.exists("model_dir"):
-    shutil.rmtree("model_dir")"""
+    #LOGGER.info("Exporting model")
+    """if os.path.exists("model_dir"):
+        shutil.rmtree("model_dir")"""
 
-#mlflow.sklearn.save_model(model, "model_dir")
+    #mlflow.sklearn.save_model(model, "model_dir")
 
-if not os.path.exists("training_validation/model_dir"):
-    os.makedirs("training_validation/model_dir")
+    if not os.path.exists("training_validation/model_dir"):
+        os.makedirs("training_validation/model_dir")
 
-joblib.dump(model, "training_validation/model_dir/model.joblib")
+    joblib.dump(model, "training_validation/model_dir/model.joblib")
 
-# Uploading inference pipeline artifact to W&B
-"""LOGGER.info("Saving and exporting the model")
-artifact = wandb.Artifact(
-    ARGS.output_artifact,
-    type='model_export',
-    description='model pipeline',
-    metadata=model_config
-)
-artifact.add_dir("model_dir")
-run.log_artifact(artifact)
+    # Uploading inference pipeline artifact to W&B
+    """LOGGER.info("Saving and exporting the model")
+    artifact = wandb.Artifact(
+        ARGS.output_artifact,
+        type='model_export',
+        description='model pipeline',
+        metadata=model_config
+    )
+    artifact.add_dir("model_dir")
+    run.log_artifact(artifact)
 
-# Saving r_squared as a summary
-run.summary['r2'] = r_squared
+    # Saving r_squared as a summary
+    run.summary['r2'] = r_squared
 
-# Logging the variable "mae" as a summary
-run.summary['mae'] = mae
+    # Logging the variable "mae" as a summary
+    run.summary['mae'] = mae
 
-LOGGER.info("Finished training and validation")"""
+    LOGGER.info("Finished training and validation")"""
 
 
-"""if __name__ == "__main__":
+if __name__ == "__main__":
 
     PARSER = argparse.ArgumentParser(description="Basic cleaning of dataset")
 
@@ -138,4 +139,4 @@ LOGGER.info("Finished training and validation")"""
 
     ARGS = PARSER.parse_args()
 
-    go(ARGS)"""
+    go(ARGS)
