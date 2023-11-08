@@ -5,14 +5,14 @@ Batch predicting next tour match results
 # pylint: disable=E0401, W0621, R0914, E1101, C0200, C0103, W0106, R0915
 """import csv
 import os.path
-import logging
 import json
 import pickle
-from datetime import datetime
 import pandas as pd
-import numpy as np
+import numpy as np"""
 import mlflow
-import wandb"""
+import logging
+from datetime import datetime
+import wandb
 import argparse
 import joblib
 from datetime import datetime, timedelta
@@ -20,10 +20,10 @@ import pandas as pd
 import yaml
 
 # Set up logging
-"""logging.basicConfig(
+logging.basicConfig(
     filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
-LOGGER = logging.getLogger()"""
+LOGGER = logging.getLogger()
 
 
 def go(ARGS):
@@ -31,11 +31,13 @@ def go(ARGS):
     Evaluating previous tour results against models predictions.
     Batch predicting next tour match results
     """
-    """LOGGER.info("7 - Running tour evaluation and prediction step")
+    LOGGER.info("7 - Running tour evaluation and prediction step")
 
     run = wandb.init(
         job_type="data_scraping")
-    run.config.update(ARGS)"""
+    run.config.update(ARGS)
+
+    model_local_path = run.use_artifact(ARGS.mlflow_model).download()
 
     df = pd.read_csv('../data/training_data.csv')
 
@@ -52,7 +54,7 @@ def go(ARGS):
 
     performance = pd.merge(recorded_data, predicted_data, on='time', how='outer')
 
-    #LOGGER.info("Calculating prediction error")
+    LOGGER.info("Calculating prediction error")
     performance['weathercode_performace'] = abs(
         performance['weathercode'] - performance['predicted_weathercode'])
 
@@ -65,7 +67,7 @@ def go(ARGS):
     performance['precipitation_performace'] = abs(
         performance['precipitation_sum'] - performance['predicted_precipitation_sum'])
 
-    #LOGGER.info("Saving the report on the latest tour prediction evaluations")
+    LOGGER.info("Saving the report on the latest tour prediction evaluations")
     performance.to_csv(
         f"../reports/weekly_batch_prediction_performace.csv",
         index=None)
@@ -87,7 +89,8 @@ def go(ARGS):
     df.set_index('time', inplace=True)
     df['city'] = config['cities']['Bristol']['id']
 
-    model = joblib.load("../training_validation/model_dir/model.joblib")
+    #model = joblib.load("../training_validation/model_dir/model.joblib")
+    model = mlflow.sklearn.load_model(model_local_path)
 
     preds = model.predict(df)
 
@@ -104,7 +107,7 @@ def go(ARGS):
 
     df.to_csv("../reports/next_week_prediction.csv")
 
-    #LOGGER.info("Batch tour evaluations and predictions finished")
+    LOGGER.info("Batch tour evaluations and predictions finished")
 
 
 if __name__ == "__main__":

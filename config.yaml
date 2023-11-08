@@ -2,6 +2,8 @@ main:
   project_name: weather-prediction
   experiment_name: development
   steps: all
+data_ingestion:
+  hostname: archive-api.open-meteo.com
 data_check:
   kl_threshold: 0.2
 data_segregation:

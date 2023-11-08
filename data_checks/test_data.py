@@ -2,14 +2,14 @@
 This script runs data tests
 """
 # pylint: disable=E0401, E1101
-"""import logging
+import logging
 from datetime import datetime
 import wandb
-import scipy"""
+#import scipy
 import pandas as pd
 
 # Setting up logging
-"""logging.basicConfig(
+logging.basicConfig(
     filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.ERROR)
 LOGGER = logging.getLogger()
@@ -17,15 +17,15 @@ LOGGER = logging.getLogger()
 RUN = wandb.init(
     job_type="data_check")
 
-LOGGER.info("3 - Running data checks")"""
+LOGGER.info("3 - Running data checks")
 
-data = pd.read_csv('../data/training_data.csv')
+#data = pd.read_csv('../data/training_data.csv')
 
 def test_format(data):
     """
     Test the format of values is correct
     """
-    #LOGGER.info("Testing if the format of the values are correct")
+    LOGGER.info("Testing if the format of the values are correct")
     # Convert the index of the DataFrame to a datetime
 
     # Check if the index is in correct format
@@ -44,7 +44,7 @@ def test_city_range(data):
     """
     Test the range of winner values
     """
-    #LOGGER.info("Testing if the values of Winner column are correct")
+    LOGGER.info("Testing if the values of Winner column are correct")
     assert data['city'].nunique() == 10
     # Checking that city values are between 1 and 10
     assert data['city'].min() >= 1 and data['city'].max() <= 10
@@ -54,7 +54,7 @@ def test_weathercode_range(data):
     """
     Test the range of winner values
     """
-    #LOGGER.info("Testing if the values of Winner column are correct")
+    LOGGER.info("Testing if the values of Winner column are correct")
 
     # Checking that winner values are between 0 and 1
     assert data['weathercode'].min() >= 0 and data['weathercode'].max() <= 99
@@ -63,7 +63,7 @@ def test_temperature_range(data):
     """
     Test the range of winner values
     """
-    #LOGGER.info("Testing if the values of Winner column are correct")
+    LOGGER.info("Testing if the values of Winner column are correct")
     # Checking that city values are between 1 and 10
     assert -30 < data['temperature_2m_max'].any() < 45
     assert -30 < data['temperature_2m_min'].any() < 45
@@ -72,7 +72,7 @@ def test_precipitation_range(data):
     """
     Test the range of winner values
     """
-    #LOGGER.info("Testing if the values of Winner column are correct")
+    LOGGER.info("Testing if the values of Winner column are correct")
     # Checking that city values are between 1 and 10
     assert 0 <= data['precipitation_sum'].any() < 60
     assert 0 <= data['precipitation_sum'].any() < 60
@@ -92,6 +92,6 @@ LOGGER.info(
 dist1 = data['Winner'].value_counts().sort_index()
 dist2 = ref_data['Winner'].value_counts().sort_index()
 # Checking if the distirbution difference is less than the k1 threshold
-assert scipy.stats.entropy(dist1, dist2, base=2) < threshold
+assert scipy.stats.entropy(dist1, dist2, base=2) < threshold"""
 
-LOGGER.info("Finished data checks")"""
+LOGGER.info("Finished data checks")

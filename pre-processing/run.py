@@ -4,12 +4,12 @@ Merges all available data. Performs data cleaning and saves it in W&B
 # pylint: disable=E0401, W0621, C0103, R0914, R0915, E1101, C0200
 """
 import pickle
-from datetime import datetime
-import logging
 import yaml
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
-import wandb"""
+from sklearn.preprocessing import LabelEncoder"""
+from datetime import datetime
+import logging
+import wandb
 import argparse
 import pandas as pd
 import json
@@ -17,10 +17,10 @@ import os
 from sklearn.preprocessing import LabelEncoder
 
 # Set up logging
-"""logging.basicConfig(
+logging.basicConfig(
     filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
-LOGGER = logging.getLogger()"""
+LOGGER = logging.getLogger()
 
 def convert_date_column(data):
     """
@@ -136,21 +136,13 @@ def go(ARGS):
         "w")"""
 
     # Creating instance
-    """run = wandb.init(
+    run = wandb.init(
         job_type="pre-processing")
     run.config.update(ARGS)
 
     LOGGER.info("2 - Running pre-processing step")
 
     LOGGER.info("Merging multiple dataframes")
-
-    # Get the datasets
-    raw_data = pd.DataFrame()
-    raw_datasets = []
-    for dataset in os.listdir('../' + input_folder_path):
-        raw_datasets.append(pd.read_csv(os.path.join(
-            '../' + input_folder_path, dataset), header=None))
-        file_record.write(str(dataset) + '\n')"""
 
     df_merged = pd.DataFrame()
 
@@ -163,17 +155,17 @@ def go(ARGS):
             data['city'] = city_data['city']
             df_merged = pd.concat([df_merged, data])
 
-    #LOGGER.info("Converting Date column into datetime format")
+    LOGGER.info("Converting Date column into datetime format")
     data = convert_date_column(df_merged)
 
-    #LOGGER.info("Converting Date column into datetime format")
+    LOGGER.info("Converting Date column into datetime format")
     data = create_month_day_column(data)
 
     # Merge the datasets
     training_data = pd.read_csv('../data/training_data.csv')
     data = merge_datasets(data, training_data)
 
-    #LOGGER.info("Removeing rows with missing values")
+    LOGGER.info("Removeing rows with missing values")
     data = remove_na(data)
 
     # Set date as index
@@ -189,16 +181,16 @@ def go(ARGS):
     data.to_csv(f'../data/training_data.csv')
 
 
-    """LOGGER.info("Uploading processed_data.csv file to W&B")
+    LOGGER.info("Uploading processed_data.csv file to W&B")
     artifact = wandb.Artifact(
         ARGS.output_artifact,
         type=ARGS.output_type,
         description=ARGS.output_description,
     )
-    artifact.add_file(f'../{output_folder_path}/processed_data.csv')
+    artifact.add_file(f'../data/training_data.csv')
     run.log_artifact(artifact)
 
-    LOGGER.info("Successfully pre-processed the data")"""
+    LOGGER.info("Successfully pre-processed the data")
 
 
 if __name__ == "__main__":

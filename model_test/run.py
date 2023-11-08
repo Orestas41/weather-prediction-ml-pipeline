@@ -3,7 +3,7 @@ This step takes the latest model and tests it against the test dataset.
 If it performs better than previous models, it is promoted to a production.
 """
 # pylint: disable=E0401, W0621, C0103, E1101, R0914, R0915
-"""import os
+import os
 import csv
 import shutil
 import logging
@@ -11,24 +11,24 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
-import wandb"""
+import wandb
 import argparse
 import joblib
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
 
 # Set up logging
-"""logging.basicConfig(
+logging.basicConfig(
     filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
-LOGGER = logging.getLogger()"""
+LOGGER = logging.getLogger()
 
 
 def go(ARGS):
     """
     Test model perfromance and promote to production if better than previous models
     """
-    """LOGGER.info("6 - Running model testing step")
+    LOGGER.info("6 - Running model testing step")
 
     run = wandb.init(job_type="model_test")
     run.config.update(ARGS)
@@ -43,42 +43,50 @@ def go(ARGS):
     model_local_path = run.use_artifact(ARGS.mlflow_model).download()
 
     # Downloading test dataset
-    test_dataset_path = run.use_artifact(ARGS.test_dataset).file()"""
+    test_dataset_path = run.use_artifact(ARGS.test_dataset).file()
 
-    df = pd.read_csv('../data/test.csv')
+    df = pd.read_csv(test_dataset_path)
 
     # Reading test dataset
     X_test = df.drop(['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'], axis=1)
-    y_test = df[['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
+    y_test = df[['time','weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
 
     X_test.set_index('time', inplace=True)
+    y_test.set_index('time', inplace=True)
 
     #LOGGER.info("Loading model and performing inference on test set")
-    #model = mlflow.sklearn.load_model(model_local_path)
-    model = joblib.load("../training_validation/model_dir/model.joblib")
+    model = mlflow.sklearn.load_model(model_local_path)
+    #model = joblib.load("../training_validation/model_dir/model.joblib")
     y_pred = model.predict(X_test)
 
-    #LOGGER.info("Scoring")
+    LOGGER.info("Scoring")
     r_squared = model.score(X_test, y_test)
 
     mae = mean_absolute_error(y_test, y_pred)
 
-    #LOGGER.info("Score: %s", r_squared)
-    #LOGGER.info("MAE: %s", mae)
+    LOGGER.info("Score: %s", r_squared)
+    LOGGER.info("MAE: %s", mae)
 
-    #LOGGER.info("Running data slice tests")
+    """LOGGER.info("Running data slice tests")
     # Data slice testing
     # iterate each value and record the metrics
-    """slice_mae = {}
-    for val in y_test.unique():
+    slice_mae = {}
+    print(y_test)
+    print(X_test['city'].unique())
+    for val in X_test['city'].unique():
+        print(val)
         # Fix the feature
-        idx = y_test == val
-
+        idx = X_test['city'] == val
+        print(idx)
+        print(X_test[idx])
         # Do the inference and Compute the metrics
         preds = model.predict(X_test[idx])
-        slice_mae[val] = mean_absolute_error(y_test[idx], preds)
+        print(y_test.loc[X_test[idx].index])
+        idx2 = y_test.index == X_test[idx].index
+        print(idx2)
+        slice_mae[val] = mean_absolute_error(y_test[idx2], preds)
 
-    LOGGER.info("MAE of slices: %s", slice_mae)
+    LOGGER.info("MAE of slices: %s", slice_mae)"""
 
     # Setting current date
     date = datetime.now().strftime('%Y-%m-%d')
@@ -141,7 +149,7 @@ def go(ARGS):
     LOGGER.info("Finished testing the model")
 
     # Finish the run
-    run.finish()"""
+    run.finish()
 
 
 if __name__ == "__main__":

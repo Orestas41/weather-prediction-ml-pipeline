@@ -3,12 +3,9 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - pandas=2.1.2
-  - pip=23.3.1
-#  - mlflow=1.23.0
-#  - numpy=1.26.0
-  - scikit-learn=1.3.2
-#  - matplotlib=3.5.1
-  - pip:
-#      - wandb
-#      - xgboost==1.7.5
+  - pandas=2.1.1
+  - mlflow=2.6.0
+  - numpy=1.26.0
+  - scikit-learn=1.2.2
+  - matplotlib-base=3.8
+  - wandb==0.15.12

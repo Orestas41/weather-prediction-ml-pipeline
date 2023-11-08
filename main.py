@@ -29,8 +29,8 @@ def go(config: DictConfig):
     """
 
     # Setting-up the wandb experiment
-    """os.environ["WANDB_PROJECT"] = config["main"]["project_name"]
-    os.environ["WANDB_RUN_GROUP"] = config["main"]["experiment_name"]"""
+    os.environ["WANDB_PROJECT"] = config["main"]["project_name"]
+    os.environ["WANDB_RUN_GROUP"] = config["main"]["experiment_name"]
 
     # Steps to execute
     steps_par = config['main']['steps']
@@ -46,7 +46,10 @@ def go(config: DictConfig):
                     "data_ingestion"),
                 "main",
                 parameters={
-                    "step_description": "This step scrapes the latest data from the web"},
+                    "step_description": "This step pull the latest weather data from API",
+                    "hostname": config["data_ingestion"]["hostname"]
+                    },
+                    
             )
 
         if "pre-processing" in active_steps:
@@ -57,8 +60,8 @@ def go(config: DictConfig):
                 "main",
                 parameters={
                     "input_artifact": "raw_data.csv:latest",
-                    "output_artifact": "processed_data.csv",
-                    "output_type": "processed_data",
+                    "output_artifact": "training_data.csv",
+                    "output_type": "training_data",
                     "output_description": "Merged and cleaned data"
                 },
             )
@@ -70,8 +73,8 @@ def go(config: DictConfig):
                     "data_checks"),
                 "main",
                 parameters={
-                    "csv": "processed_data.csv:latest",
-                    "ref": "processed_data.csv:reference",
+                    "csv": "training_data.csv:latest",
+                    "ref": "training_data.csv:reference",
                     "kl_threshold": config["data_check"]["kl_threshold"]
                     }
             )
@@ -83,7 +86,7 @@ def go(config: DictConfig):
                     "data_segregation"),
                 "main",
                 parameters={
-                    "input": "processed_data.csv:latest",
+                    "input": "training_data.csv:latest",
                     "test_size": config["data_segregation"]["test_size"]}
             )
 

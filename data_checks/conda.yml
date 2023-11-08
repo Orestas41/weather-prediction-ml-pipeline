@@ -3,6 +3,6 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - pandas=2.1.2
-  - pytest=7.1.1
-  - scipy
+  - pandas=2.1.1
+  - pytest=7.4.0
+  - wandb==0.15.12
