@@ -11,7 +11,6 @@ import mlflow
 import wandb
 import argparse
 import os
-import joblib
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
@@ -35,7 +34,7 @@ def go(ARGS):
         job_type="training_validation")
     run.config.update(ARGS)
 
-    # Getting the Linear Regression configuration and updating W&B
+    # Getting the <MODEL> configuration and updating W&B
     with open(ARGS.model_config) as file:
         model_config = json.load(file)
     run.config.update(model_config)
@@ -46,27 +45,26 @@ def go(ARGS):
 
     df = pd.read_csv(trainval_local_path)
 
-    LOGGER.info("Setting winner column as target")
+    LOGGER.info("Setting feature and target columns")
     X = df.drop(['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'], axis=1)
     y = df[['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
 
     LOGGER.info("Number of outcomes: %s", y.nunique())
 
+    LOGGER.info('Splitting data into training and validation')
     X_train, X_val, y_train, y_val = train_test_split(
         X, y, test_size=0.3)
 
     X_train.set_index('time', inplace=True)
     X_val.set_index('time', inplace=True)
 
-    LOGGER.info("Preparing Linear Regression model")
-    #model = LinearRegression(**model_config)
+    LOGGER.info("Preparing <MODEL> model")
+    #model = <MODEL>(**model_config)
     model = RandomForestRegressor()
 
-    # Fitting it to the X_train, y_train data
     LOGGER.info("Fitting")
     model.fit(X_train, y_train)
 
-    # Evaluating the model
     LOGGER.info("Scoring the model")
     r_squared = model.score(X_val, y_val)
     y_pred = model.predict(X_val)
@@ -81,13 +79,7 @@ def go(ARGS):
 
     mlflow.sklearn.save_model(model, "model_dir")
 
-    """if not os.path.exists("training_validation/model_dir"):
-        os.makedirs("training_validation/model_dir")
-
-    joblib.dump(model, "training_validation/model_dir/model.joblib")"""
-
-    # Uploading inference pipeline artifact to W&B
-    LOGGER.info("Saving and exporting the model")
+    LOGGER.info("Exporting the model artifacts")
     artifact = wandb.Artifact(
         ARGS.output_artifact,
         type='model_export',

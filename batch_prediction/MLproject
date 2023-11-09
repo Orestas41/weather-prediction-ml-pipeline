@@ -7,4 +7,9 @@ entry_points:
       mlflow_model:
         description: An MLflow serialized model
         type: string
-    command: "python run.py --mlflow_model {mlflow_model}"
+
+      full_dataset:
+        description: Full training dataset with the latest data
+        type: string
+
+    command: "python run.py --mlflow_model {mlflow_model} --full_dataset {full_dataset}"

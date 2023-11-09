@@ -29,32 +29,31 @@ def data(request):
     """Read the data from a CSV file."""
     run = wandb.init(job_type="data_tests", resume=True)
     data_path = run.use_artifact(request.config.option.csv).file()
-    #data_path = '../data/training_data.csv'
     if data_path is None:
         pytest.fail("You must provide the --csv option on the command line")
     data_frame = pd.read_csv(data_path)
     return data_frame
 
 
-"""@pytest.fixture(scope='session')
+@pytest.fixture(scope='session')
 def ref_data(request):
-"""
-#Read the reference data from a CSV file.
-"""
-run = wandb.init(job_type="data_tests", resume=True)
-data_path = run.use_artifact(request.config.option.ref).file()
-if data_path is None:
-    pytest.fail("You must provide the --ref option on the command line")
-data_frame = pd.read_csv(data_path)
-return data_frame
+    """
+    #Read the reference data from a CSV file.
+    """
+    run = wandb.init(job_type="data_tests", resume=True)
+    data_path = run.use_artifact(request.config.option.ref).file()
+    if data_path is None:
+        pytest.fail("You must provide the --ref option on the command line")
+    data_frame = pd.read_csv(data_path)
+    return data_frame
 
 
 @pytest.fixture(scope='session')
 def threshold(request):
-"""
-#Get the KL threshold from the command line.
-"""
-kl_threshold = request.config.option.kl_threshold
-if kl_threshold is None:
-    pytest.fail("You must provide a threshold for the KL test")
-return kl_threshold"""
+    """
+    #Get the KL threshold from the command line.
+    """
+    kl_threshold = request.config.option.kl_threshold
+    if kl_threshold is None:
+        pytest.fail("You must provide a threshold for the KL test")
+    return kl_threshold

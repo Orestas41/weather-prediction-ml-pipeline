@@ -59,10 +59,9 @@ def go(config: DictConfig):
                     "pre-processing"),
                 "main",
                 parameters={
-                    "input_artifact": "raw_data.csv:latest",
                     "output_artifact": "training_data.csv",
                     "output_type": "training_data",
-                    "output_description": "Merged and cleaned data"
+                    "output_description": "New data merged with previous training data"
                 },
             )
 
@@ -127,7 +126,8 @@ def go(config: DictConfig):
                     "batch_prediction"),
                 "main",
                 parameters={
-                    "mlflow_model": "model_export:prod"
+                    "mlflow_model": "model_export:prod",
+                    "full_dataset": "training_data.csv:latest"
                 },
             )
 

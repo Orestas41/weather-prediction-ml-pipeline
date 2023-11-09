@@ -36,20 +36,19 @@ def go(ARGS):
     LOGGER.info("Splitting data into trainval and test")
     trainval, test = train_test_split(
         data_frame,
-        test_size=0.3,
+        test_size=ARGS.test_size,
     )
 
     trainval.set_index('time', inplace=True)
     test.set_index('time', inplace=True)
 
-    trainval.to_csv('../data/trainval.csv')
-    test.to_csv('../data/test.csv')
+    #trainval.to_csv('../data/trainval.csv')
+    #test.to_csv('../data/test.csv')
 
     for data_frame, k in zip([trainval, test], ['trainval', 'test']):
         LOGGER.info("Uploading %s_data.csv dataset", k)
         with tempfile.NamedTemporaryFile("w") as file:
             data_frame.to_csv(file.name, index=True)
-
             artifact = wandb.Artifact(
                 f"{k}_data.csv",
                 type=f"{k}_data",

@@ -2,19 +2,11 @@
 Merges all available data. Performs data cleaning and saves it in W&B
 """
 # pylint: disable=E0401, W0621, C0103, R0914, R0915, E1101, C0200
-"""
-import pickle
-import yaml
-import numpy as np
-from sklearn.preprocessing import LabelEncoder"""
 from datetime import datetime
 import logging
 import wandb
 import argparse
 import pandas as pd
-import json
-import os
-from sklearn.preprocessing import LabelEncoder
 
 # Set up logging
 logging.basicConfig(
@@ -121,19 +113,6 @@ def go(ARGS):
     """
     Combines all data processing functions and completes data pre-processing
     """
-    """
-    # Load config.yaml and get input and output paths
-    with open('../config.yaml', 'r') as file:
-        config = yaml.load(file, Loader=yaml.FullLoader)
-
-    # Setting-up directory paths
-    input_folder_path = config['directories']['input_folder_path']
-    output_folder_path = config['directories']['output_folder_path']
-
-    # Setting-up ingested file recording
-    file_record = open(
-        f"../reports/ingestedfiles/{datetime.now().strftime('%Y-%m-%d')}.txt",
-        "w")"""
 
     # Creating instance
     run = wandb.init(
@@ -142,46 +121,35 @@ def go(ARGS):
 
     LOGGER.info("2 - Running pre-processing step")
 
-    LOGGER.info("Merging multiple dataframes")
+    LOGGER.info("Opening raw data file")
+    data = pd.read_csv('../data/raw_data.csv')
 
-    df_merged = pd.DataFrame()
+    LOGGER.info("Converting time column into datetime format")
+    data = convert_date_column(data)
 
-    path_to_json = '../data/raw'
-    for filename in os.listdir(path_to_json):
-        if filename.endswith('.json'):
-            with open(os.path.join(path_to_json, filename), 'r') as f:
-                city_data = json.load(f)
-            data = pd.DataFrame(city_data['daily'])
-            data['city'] = city_data['city']
-            df_merged = pd.concat([df_merged, data])
-
-    LOGGER.info("Converting Date column into datetime format")
-    data = convert_date_column(df_merged)
-
-    LOGGER.info("Converting Date column into datetime format")
+    LOGGER.info("Creating month-day column")
     data = create_month_day_column(data)
 
-    # Merge the datasets
+    LOGGER.info("Merging new data with old training data")
     training_data = pd.read_csv('../data/training_data.csv')
     data = merge_datasets(data, training_data)
 
-    LOGGER.info("Removeing rows with missing values")
+    LOGGER.info("Removing rows with missing values")
     data = remove_na(data)
 
-    # Set date as index
+    LOGGER.info("Setting date as index")
     data = set_date_index(data)
 
-    # Sort by date
+    LOGGER.info("Sorting by date")
     data = sort_by_date(data)
 
-    # Remove duplicate rows
+    LOGGER.info("Removing duplicate rows")
     data = drop_duplicates(data)
 
     # Save merged datasets as one file
     data.to_csv(f'../data/training_data.csv')
 
-
-    LOGGER.info("Uploading processed_data.csv file to W&B")
+    LOGGER.info("Uploading training_data.csv file to W&B")
     artifact = wandb.Artifact(
         ARGS.output_artifact,
         type=ARGS.output_type,
@@ -197,13 +165,6 @@ if __name__ == "__main__":
 
     PARSER = argparse.ArgumentParser(
         description="This step merges and cleans the data")
-
-    PARSER.add_argument(
-        "--input_artifact",
-        type=str,
-        help='Fully-qualified name for the input artifact',
-        required=True
-    )
 
     PARSER.add_argument(
         "--output_artifact",

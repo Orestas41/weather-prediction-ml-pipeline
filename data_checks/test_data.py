@@ -5,7 +5,7 @@ This script runs data tests
 import logging
 from datetime import datetime
 import wandb
-#import scipy
+import scipy
 import pandas as pd
 
 # Setting up logging
@@ -18,8 +18,6 @@ RUN = wandb.init(
     job_type="data_check")
 
 LOGGER.info("3 - Running data checks")
-
-#data = pd.read_csv('../data/training_data.csv')
 
 def test_format(data):
     """
@@ -78,20 +76,19 @@ def test_precipitation_range(data):
     assert 0 <= data['precipitation_sum'].any() < 60
 
 
-"""def test_similar_distrib(
+def test_similar_distrib(
     data: pd.DataFrame,
     ref_data: pd.DataFrame,
     threshold: float):
-"""
-#Applying a threshold on the KL divergence to detect if the distribution of the new data is
-#significantly different than that of the reference dataset
-"""
+    """
+    Applying a threshold on the KL divergence to detect if the distribution of the new data is
+    significantly different than that of the reference dataset
+    """
+    LOGGER.info(
+        "Testing of the distribution of the dataset is similar to what is expected")
+    dist1 = data['precipitation_sum'].value_counts().sort_index()
+    dist2 = ref_data['precipitation_sum'].value_counts().sort_index()
+    # Checking if the distribution difference is less than the k1 threshold
+    assert scipy.stats.entropy(dist1, dist2, base=2) < threshold
 
-LOGGER.info(
-    "Testing of the distribution of the dataset is similar to what is expected")
-dist1 = data['Winner'].value_counts().sort_index()
-dist2 = ref_data['Winner'].value_counts().sort_index()
-# Checking if the distirbution difference is less than the k1 threshold
-assert scipy.stats.entropy(dist1, dist2, base=2) < threshold"""
-
-LOGGER.info("Finished data checks")
+    LOGGER.info("Finished data checks")

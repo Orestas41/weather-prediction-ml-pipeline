@@ -13,7 +13,6 @@ import mlflow
 import numpy as np
 import wandb
 import argparse
-import joblib
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
 
@@ -38,73 +37,55 @@ def go(ARGS):
         ARGS.mlflow_model,
         ARGS.test_dataset
     )
-
-    # Downloading input artifact
+    # Downloading model artifact
     model_local_path = run.use_artifact(ARGS.mlflow_model).download()
-
     # Downloading test dataset
     test_dataset_path = run.use_artifact(ARGS.test_dataset).file()
 
     df = pd.read_csv(test_dataset_path)
 
-    # Reading test dataset
+    LOGGER.info("Setting feature and target columns")
     X_test = df.drop(['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'], axis=1)
     y_test = df[['time','weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
 
     X_test.set_index('time', inplace=True)
     y_test.set_index('time', inplace=True)
 
-    #LOGGER.info("Loading model and performing inference on test set")
+    LOGGER.info("Loading model and performing inference on test set")
     model = mlflow.sklearn.load_model(model_local_path)
-    #model = joblib.load("../training_validation/model_dir/model.joblib")
     y_pred = model.predict(X_test)
 
     LOGGER.info("Scoring")
     r_squared = model.score(X_test, y_test)
-
-    mae = mean_absolute_error(y_test, y_pred)
-
     LOGGER.info("Score: %s", r_squared)
+    mae = mean_absolute_error(y_test, y_pred)
     LOGGER.info("MAE: %s", mae)
 
-    """LOGGER.info("Running data slice tests")
-    # Data slice testing
-    # iterate each value and record the metrics
+    LOGGER.info("Running data slice tests")
     slice_mae = {}
-    print(y_test)
-    print(X_test['city'].unique())
     for val in X_test['city'].unique():
-        print(val)
-        # Fix the feature
         idx = X_test['city'] == val
-        print(idx)
-        print(X_test[idx])
         # Do the inference and Compute the metrics
         preds = model.predict(X_test[idx])
-        print(y_test.loc[X_test[idx].index])
-        idx2 = y_test.index == X_test[idx].index
-        print(idx2)
-        slice_mae[val] = mean_absolute_error(y_test[idx2], preds)
-
-    LOGGER.info("MAE of slices: %s", slice_mae)"""
-
-    # Setting current date
-    date = datetime.now().strftime('%Y-%m-%d')
+        slice_mae[val] = mean_absolute_error(y_test[idx], preds)
+        LOGGER.info("MAE of slices: %s", slice_mae[val])
 
     LOGGER.info("Testing data drift. Expecting results to be False")
     # Opening model performance log
     perf = pd.read_csv('../reports/model_performance.csv', index_col=0)
-    # Raw comprison test
+
+    # Raw comparison test
     raw_comp = r_squared < np.min(perf['Score'])
+    LOGGER.info("Raw comparison: %s", raw_comp)
+
     # Parametric significance test
     param_signific = r_squared < np.mean(
         perf['Score']) - 2 * np.std(perf['Score'])
+    LOGGER.info("Parametric significance: %s", param_signific)
+
     # Non-parametric outlier test
     iqr = np.quantile(perf['Score'], 0.75) - np.quantile(perf['Score'], 0.25)
     nonparam = r_squared < np.quantile(perf['Score'], 0.25) - iqr * 1.5
-
-    LOGGER.info("Raw comparison: %s", raw_comp)
-    LOGGER.info("Parametric significance: %s", param_signific)
     LOGGER.info("Non-parametric outlier: %s", nonparam)
 
     LOGGER.info(
@@ -121,14 +102,15 @@ def go(ARGS):
     if mae <= perf['MAE'].min() or raw_comp or param_signific or nonparam:
         if os.path.exists("../prod_model_dir"):
             shutil.rmtree("../prod_model_dir")
-        LOGGER.info("Saving model locally")
+        LOGGER.info("Model performance is better than previous model. Promoting new model to production")
         mlflow.sklearn.save_model(model, "../prod_model_dir")
     else:
         pass
 
-    performance = pd.read_csv("../reports/model_performance.csv")
+    
     LOGGER.info(
         "Generating plot that displays the change in model performance over time")
+    performance = pd.read_csv("../reports/model_performance.csv")
     plt.plot(performance["Date"], performance["Score"], label="Score")
     plt.plot(performance["Date"], performance["MAE"], label="MAE")
     plt.legend()

@@ -7,4 +7,9 @@ entry_points:
       step_description:
         description: This step pull the latest data from the api
         type: string
-    command: "python run.py --step_description {step_description} {hostname}"
+      
+      hostname:
+        description: HTTPS connection to the server with the hostname
+        type: string
+        
+    command: "python run.py --step_description {step_description} --hostname {hostname}"

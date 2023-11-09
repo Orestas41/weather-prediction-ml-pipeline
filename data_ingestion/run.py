@@ -31,9 +31,7 @@ def go(args):
             config = yaml.load(file, Loader=yaml.FullLoader)
 
     # Setting up API request
-    hostname = run.use_artifact(args.hostname).file()
-
-    conn = http.client.HTTPSConnection(hostname)
+    conn = http.client.HTTPSConnection(args.hostname)
     payload = ''
     headers = {}
 
@@ -44,13 +42,13 @@ def go(args):
 
     for i in city:
         LOGGER.info(f"Pulling weather data for {i}")
-        conn.request("GET", f"/v1/archive?latitude={config['cities'][i]['latitude']}&longitude={config['cities'][i]['longitude']}&start_date={start}&end_date={end}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FLondon", payload, headers)
+        conn.request("GET", f"/v1/archive?latitude={config['cities'][i]['latitude']}&longitude={config['cities'][i]['longitude']}&start_date={start.strftime('%Y-%m-%d')}&end_date={end.strftime('%Y-%m-%d')}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FLondon", payload, headers)
         res = conn.getresponse()
         data = res.read()
         data = json.loads(data.decode("utf-8"))
-        data["city"] = config['cities'][i]['id']
         data = pd.DataFrame(data['daily'])
-        data['city'] = data['city']
+        data["city"] = config['cities'][i]['id']
+        #data['city'] = data['city']
         df_merged = pd.concat([df_merged, data])
 
     LOGGER.info("Saving merged data as csv file")
@@ -59,7 +57,7 @@ def go(args):
     # Recording data range pulled
     data_record = open(
         f"../reports/ingested_data.txt","w")
-    data_record.write(str(datetime.now().strftime('%Y-%m-%d')) + f' - data pulled from {start} to {end}' + '\n')
+    data_record.write(str(datetime.now().strftime('%Y-%m-%d')) + f' - data pulled from {start.strftime("%Y-%m-%d")} to {end.strftime("%Y-%m-%d")}' + '\n')
 
     LOGGER.info("Data ingestion finished")
 
@@ -72,10 +70,10 @@ if __name__ == "__main__":
     PARSER.add_argument("--step_description", type=str,
                         help="Description of the step")
     
-    PARSER.add_argument(
-        "hostname",
-        type=str,
-        help="HTTPS connection to the server with the hostname")
+    PARSER.add_argument("--hostname", type=str,
+        help="HTTPS connection to the server with the hostname",
+        required=True
+        )
 
     args = PARSER.parse_args()
 

@@ -4,15 +4,10 @@ conda_env: conda.yml
 entry_points:
   main:
     parameters:
-      input_artifact:
-        description: Fully-qualified name for the input artifact
-        type: string
-        default: raw_data.csv:latest
-
       output_artifact:
         description: Name of the output artifact
         type: string
-        default: precessed_data.csv
+        default: training_data.csv
 
       output_type:
         description: Type of the output artifact
@@ -21,7 +16,7 @@ entry_points:
       output_description:
         description: Description of the output artifact
         type: string
-        default: Mergining and cleaning the data
+        default: New data merged with previous training data
 
     command: >-
-      python run.py  --input_artifact {input_artifact}  --output_artifact {output_artifact}  --output_type {output_type} --output_description {output_description}
+      python run.py  --output_artifact {output_artifact}  --output_type {output_type} --output_description {output_description}
