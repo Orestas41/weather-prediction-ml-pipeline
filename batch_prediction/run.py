@@ -124,6 +124,30 @@ def go(ARGS):
     LOGGER.info("Average Min temperature prediction: %s", prediction['predicted_temperature_2m_min'].mean())
     LOGGER.info("Average Precipitation prediction: %s", prediction['predicted_precipitation_sum'].mean())
 
+    LOGGER.info("Plotting next weeks weather prediction")
+    temperature_range = (prediction['predicted_temperature_2m_max'] + prediction['predicted_temperature_2m_min']) / 2
+    fig, ax = plt.subplots()
+    ax2 = ax.twinx()
+    ax.fill_between(prediction.index, prediction['predicted_temperature_2m_min'], prediction['predicted_temperature_2m_max'], alpha=0.5)
+    ax.plot(temperature_range, label='Mean temperature', marker='o', color='blue')
+    ax.plot(prediction['predicted_temperature_2m_max'], label='Max temperature', color='red', marker='s')
+    ax.plot(prediction['predicted_temperature_2m_min'], label='Min temperature', color='blue', marker='^')
+    ax2.fill_between(prediction.index, prediction['predicted_precipitation_sum'], 0, alpha=0.5, color='cyan')
+    ax2.plot(prediction['predicted_precipitation_sum'], label='Precipitation amount', color='cyan', marker=',')
+    for x, y in zip(prediction.index, temperature_range):
+        plt.annotate(str(round(y,1)), xy=(x, y), ha='center', va='center') 
+    for x, y in zip(prediction.index, prediction['predicted_precipitation_sum']):
+        plt.annotate(str(round(y,1)), xy=(x, y), ha='center', va='center')
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Temperature (°C)')
+    ax.set_title('Weather predictions for Bristol')
+    ax.set_ylim(0, 22)
+    ax2.set_ylabel('Precipitation (mm)')
+    ax2.set_ylim(0, 30)
+    ax.grid(True)
+    ax.legend()
+    plt.savefig('../reports/next_week_weather_prediction.png')
+
     prediction.to_csv("../reports/next_week_prediction.csv")
 
     LOGGER.info("Batch tour evaluations and predictions finished")
