@@ -7,6 +7,8 @@ import logging
 import wandb
 import argparse
 import pandas as pd
+import os
+import tempfile
 
 # Set up logging
 logging.basicConfig(
@@ -119,10 +121,23 @@ def go(ARGS):
         job_type="pre-processing")
     run.config.update(ARGS)
 
-    LOGGER.info("2 - Running pre-processing step")
+    LOGGER.info("2 - Running pre-processing step")    
+
+    LOGGER.info("Setting up file locations according to the environment")
+    if not os.getenv('TESTING'):
+        raw_data_path = '../data/raw_data.csv'
+        training_data_path = '../data/training_data.csv'
+        training_data_save_path = '../data/training_data.csv'
+    else:
+        raw_data_path = 'data/raw_data.csv'
+        training_data_path = 'data/training_data.csv'
+        # Use a temporary directory for testing
+        if not os.path.exists('data'):
+            os.makedirs('data')
+        training_data_save_path = os.path.join(tempfile.gettempdir(), 'training_data.csv')
 
     LOGGER.info("Opening raw data file")
-    data = pd.read_csv('../data/raw_data.csv')
+    data = pd.read_csv(raw_data_path)
 
     LOGGER.info("Converting time column into datetime format")
     data = convert_date_column(data)
@@ -131,7 +146,7 @@ def go(ARGS):
     data = create_month_day_column(data)
 
     LOGGER.info("Merging new data with old training data")
-    training_data = pd.read_csv('../data/training_data.csv')
+    training_data = pd.read_csv(training_data_path)
     data = merge_datasets(data, training_data)
 
     LOGGER.info("Removing rows with missing values")
@@ -147,7 +162,7 @@ def go(ARGS):
     data = drop_duplicates(data)
 
     # Save merged datasets as one file
-    data.to_csv(f'../data/training_data.csv')
+    data.to_csv(training_data_save_path)
 
     LOGGER.info("Uploading training_data.csv file to W&B")
     artifact = wandb.Artifact(
@@ -155,7 +170,7 @@ def go(ARGS):
         type=ARGS.output_type,
         description=ARGS.output_description,
     )
-    artifact.add_file(f'../data/training_data.csv')
+    artifact.add_file(training_data_path)
     run.log_artifact(artifact)
 
     LOGGER.info("Successfully pre-processed the data")

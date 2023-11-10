@@ -4,6 +4,7 @@ This script splits the provided dataframe into a test set and a remainder set
 # pylint: disable=E0401, W0621, C0103, E1101
 import tempfile
 import logging
+import os
 from datetime import datetime
 import wandb
 import argparse
@@ -28,6 +29,17 @@ def go(ARGS):
 
     LOGGER.info("4 - Running data segregation step")
 
+    LOGGER.info("Setting up file locations according to the environment")
+    if not os.getenv('TESTING'):
+        trainval_path = '../data/trainval.csv'
+        test_path = '../data/test.csv'
+    else:
+        # Use a temporary directory for testing
+        if not os.path.exists('data'):
+            os.makedirs('data')
+        trainval_path = os.path.join(tempfile.gettempdir(), 'trainval.csv')
+        test_path = os.path.join(tempfile.gettempdir(), 'test.csv')
+
     LOGGER.info("Fetching artifact %s", ARGS.input)
     artifact_local_path = run.use_artifact(ARGS.input).file()
 
@@ -39,16 +51,16 @@ def go(ARGS):
         test_size=ARGS.test_size,
     )
 
-    trainval.set_index('time', inplace=True)
-    test.set_index('time', inplace=True)
+    #trainval.set_index('time', inplace=True)
+    #test.set_index('time', inplace=True)
 
-    #trainval.to_csv('../data/trainval.csv')
-    #test.to_csv('../data/test.csv')
+    trainval.to_csv(trainval_path, index=False)
+    test.to_csv(test_path, index=False)
 
     for data_frame, k in zip([trainval, test], ['trainval', 'test']):
         LOGGER.info("Uploading %s_data.csv dataset", k)
         with tempfile.NamedTemporaryFile("w") as file:
-            data_frame.to_csv(file.name, index=True)
+            data_frame.to_csv(file.name, index=False)
             artifact = wandb.Artifact(
                 f"{k}_data.csv",
                 type=f"{k}_data",
@@ -56,7 +68,10 @@ def go(ARGS):
             )
             artifact.add_file(file.name)
             run.log_artifact(artifact)
-            artifact.wait()
+            if not os.getenv('TESTING'):
+                artifact.wait()
+            else:
+                pass
 
     LOGGER.info("Finished data segregation")
 

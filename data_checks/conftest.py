@@ -2,18 +2,23 @@
 This script defines shared fixtures and configuration options for test files
 """
 # pylint: disable=E1101, E0401
-from datetime import datetime
-import logging
+import os
+import tempfile
 import wandb
 import pytest
 import pandas as pd
 
-# Setting up logging
-logging.basicConfig(
-    filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
-    level=logging.INFO)
-LOGGER = logging.getLogger()
-
+"""if not os.getenv('TESTING'):
+    raw_data_path = '../data/raw_data.csv'
+    training_data_path = '../data/training_data.csv'
+    training_data_save_path = '../data/training_data.csv'
+else:
+    raw_data_path = 'data/raw_data.csv'
+    training_data_path = 'data/training_data.csv'
+    # Use a temporary directory for testing
+    if not os.path.exists('data'):
+        os.makedirs('data')
+    training_data_save_path = os.path.join(tempfile.gettempdir(), 'training_data.csv')"""
 
 def pytest_addoption(parser):
     """

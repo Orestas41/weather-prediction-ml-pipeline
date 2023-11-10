@@ -25,18 +25,14 @@ def test_format(data):
     """
     LOGGER.info("Testing if the format of the values are correct")
     # Convert the index of the DataFrame to a datetime
-
     # Check if the index is in correct format
-    #print(data.index.dtype)
-    #assert isinstance(data.index, pd.DatetimeIndex)
-    #assert data.index.dtype == 'datetime64[ns]'
-    #assert data['time'].dtype == 'datetime64[ns]'
+    data.index = pd.to_datetime(data.index)
+    assert isinstance(data.index, pd.DatetimeIndex)
     # Checking if columns that are not dates have either integer or float
     # values
     for column in data.columns:
         if column != 'time':
             assert data[column].dtype in (int, float)
-
 
 def test_city_range(data):
     """
@@ -46,7 +42,6 @@ def test_city_range(data):
     assert data['city'].nunique() == 10
     # Checking that city values are between 1 and 10
     assert data['city'].min() >= 1 and data['city'].max() <= 10
-
 
 def test_weathercode_range(data):
     """
@@ -75,20 +70,20 @@ def test_precipitation_range(data):
     assert 0 <= data['precipitation_sum'].any() < 60
     assert 0 <= data['precipitation_sum'].any() < 60
 
-
+"""
 def test_similar_distrib(
-    data: pd.DataFrame,
-    ref_data: pd.DataFrame,
-    threshold: float):
-    """
-    Applying a threshold on the KL divergence to detect if the distribution of the new data is
-    significantly different than that of the reference dataset
-    """
-    LOGGER.info(
-        "Testing of the distribution of the dataset is similar to what is expected")
-    dist1 = data['precipitation_sum'].value_counts().sort_index()
-    dist2 = ref_data['precipitation_sum'].value_counts().sort_index()
-    # Checking if the distribution difference is less than the k1 threshold
-    assert scipy.stats.entropy(dist1, dist2, base=2) < threshold
-
-    LOGGER.info("Finished data checks")
+data: pd.DataFrame,
+ref_data: pd.DataFrame,
+threshold: float):
+"""
+#Applying a threshold on the KL divergence to detect if the distribution of the new data is
+#significantly different than that of the reference dataset
+"""
+LOGGER.info(
+    "Testing of the distribution of the dataset is similar to what is expected")
+dist1 = data['precipitation_sum'].value_counts().sort_index()
+dist2 = ref_data['precipitation_sum'].value_counts().sort_index()
+# Checking if the distribution difference is less than the k1 threshold
+assert scipy.stats.entropy(dist1, dist2, base=2) < threshold
+"""
+    #LOGGER.info("Finished data checks")

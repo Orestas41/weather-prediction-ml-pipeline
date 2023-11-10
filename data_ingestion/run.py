@@ -8,12 +8,16 @@ import argparse
 import http.client
 import pandas as pd
 import json
+import os
+import tempfile
 import yaml
 from datetime import datetime, timedelta
 
+date = datetime.now()
+
 # Setting up logging
 logging.basicConfig(
-    filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
+    filename=f"../reports/logs/{date.strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
 LOGGER = logging.getLogger()
 
@@ -25,9 +29,22 @@ def go(args):
     LOGGER.info("1 - Running data ingestion step")
     run = wandb.init(job_type="data_ingestion")
     run.config.update(args)
+
+    LOGGER.info("Setting up file locations according to the environment")
+    if not os.getenv('TESTING'):
+        config_path = '../config.yaml'
+        data_save_path = '../data/raw_data.csv'
+        report_save_path = "../reports/ingested_data.txt"
+    else:
+        config_path = 'config.yaml'
+        # Use a temporary directory for testing
+        if not os.path.exists('data'):
+            os.makedirs('data')
+        data_save_path = os.path.join(tempfile.gettempdir(), 'raw_data.csv')
+        report_save_path = os.path.join(tempfile.gettempdir(), 'ingested_data.txt')    
     
     # Opening configuration file
-    with open('../config.yaml', 'r') as file:
+    with open(config_path, 'r') as file:
             config = yaml.load(file, Loader=yaml.FullLoader)
 
     # Setting up API request
@@ -36,8 +53,8 @@ def go(args):
     headers = {}
 
     city = config['cities']
-    start = datetime.now() - timedelta(days=8)
-    end = datetime.now() - timedelta(days=1)
+    start = date - timedelta(days=8)
+    end = date - timedelta(days=2)
     df_merged = pd.DataFrame()
 
     for i in city:
@@ -52,12 +69,12 @@ def go(args):
         df_merged = pd.concat([df_merged, data])
 
     LOGGER.info("Saving merged data as csv file")
-    df_merged.to_csv(f'../data/raw_data.csv')
+    df_merged.to_csv(data_save_path, index=False)
 
-    # Recording data range pulled
+    LOGGER.info("Saving ingestion range record")
     data_record = open(
-        f"../reports/ingested_data.txt","w")
-    data_record.write(str(datetime.now().strftime('%Y-%m-%d')) + f' - data pulled from {start.strftime("%Y-%m-%d")} to {end.strftime("%Y-%m-%d")}' + '\n')
+        report_save_path,"w")
+    data_record.write(str(date.strftime('%Y-%m-%d')) + f' - data pulled from {start.strftime("%Y-%m-%d")} to {end.strftime("%Y-%m-%d")}' + '\n')
 
     LOGGER.info("Data ingestion finished")
 
