@@ -7,6 +7,8 @@ import mlflow
 import logging
 from datetime import datetime
 import wandb
+import os
+import tempfile
 import argparse
 from datetime import datetime, timedelta
 import pandas as pd
@@ -27,6 +29,21 @@ def go(ARGS):
     """
     LOGGER.info("7 - Running weekly batch prediction and evaluation step")
 
+    LOGGER.info("Setting up file locations according to the environment")
+    if not os.getenv('TESTING'):
+        prediction_path = '../reports/next_week_prediction.csv'
+        prediction_save_path = '../reports/next_week_prediction.csv'
+        prediction_performance_path = "../reports/weekly_batch_prediction_performace.csv"
+        prediction_plot_path = '../reports/next_week_weather_prediction.png'
+    else:
+        prediction_path = 'reports/next_week_prediction.csv'
+        prediction_performance_path = "reports/weekly_batch_prediction_performace.csv"
+        # Use a temporary directory for testing
+        if not os.path.exists('data'):
+            os.makedirs('data')
+        prediction_save_path = os.path.join(tempfile.gettempdir(), 'next_week_prediction.csv')
+        prediction_plot_path = os.path.join(tempfile.gettempdir(), "next_week_weather_prediction.png")
+
     run = wandb.init(
         job_type="batch_prediction")
     run.config.update(ARGS)
@@ -44,7 +61,7 @@ def go(ARGS):
     prediction = pd.read_csv(full_dataset_path)
 
     LOGGER.info("Opening last weeks predictions")
-    predicted_data = pd.read_csv('../reports/next_week_prediction.csv')
+    predicted_data = pd.read_csv(prediction_path)
 
     LOGGER.info("Locating prediction range")
     # Last weeks prediction range
@@ -85,12 +102,10 @@ def go(ARGS):
 
     LOGGER.info("Saving the report on the latest tour prediction evaluations")
     performance.to_csv(
-        f"../reports/weekly_batch_prediction_performace.csv",
+        prediction_performance_path,
         index=None)
     
     LOGGER.info("Setting up prediction for the next week")
-    with open('../config.yaml', 'r') as file:
-            config = yaml.load(file, Loader=yaml.FullLoader)
 
     # Create a date range for the next 7 days
     date_rng = pd.date_range(start=datetime.now(), end=datetime.now() + timedelta(days=7), freq='D', normalize=True)
@@ -102,7 +117,7 @@ def go(ARGS):
     prediction['month-day'] = pd.to_datetime(prediction['month-day'], format='%m-%d')
     prediction['month-day'] = pd.to_datetime(prediction['month-day']).dt.strftime('%m%d').astype(int)
     prediction.set_index('time', inplace=True)
-    prediction['city'] = config['cities']['Bristol']['id']
+    prediction['city'] = predicted_data['city'][0]
 
     LOGGER.info("Inference")
     model = mlflow.sklearn.load_model(model_local_path)
@@ -146,9 +161,9 @@ def go(ARGS):
     ax2.set_ylim(0, 30)
     ax.grid(True)
     ax.legend()
-    plt.savefig('../reports/next_week_weather_prediction.png')
+    plt.savefig(prediction_plot_path)
 
-    prediction.to_csv("../reports/next_week_prediction.csv")
+    prediction.to_csv(prediction_save_path)
 
     LOGGER.info("Batch tour evaluations and predictions finished")
 

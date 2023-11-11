@@ -8,6 +8,7 @@ import shutil
 import json
 from datetime import datetime
 import mlflow
+import tempfile
 import wandb
 import argparse
 import os
@@ -33,12 +34,12 @@ def go(ARGS):
         project="weather-prediction",
         job_type="training_validation")
     run.config.update(ARGS)
-
+    print(ARGS.model_config)
     # Getting the <MODEL> configuration and updating W&B
     with open(ARGS.model_config) as file:
         model_config = json.load(file)
     run.config.update(model_config)
-
+    print(model_config)
     LOGGER.info(
         "Fetching %s and setting it as dataframe", ARGS.trainval_artifact)
     trainval_local_path = run.use_artifact(ARGS.trainval_artifact).file()
@@ -53,7 +54,7 @@ def go(ARGS):
 
     LOGGER.info('Splitting data into training and validation')
     X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.3)
+        X, y, test_size=ARGS.val_size)
 
     X_train.set_index('time', inplace=True)
     X_val.set_index('time', inplace=True)

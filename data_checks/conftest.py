@@ -8,18 +8,6 @@ import wandb
 import pytest
 import pandas as pd
 
-"""if not os.getenv('TESTING'):
-    raw_data_path = '../data/raw_data.csv'
-    training_data_path = '../data/training_data.csv'
-    training_data_save_path = '../data/training_data.csv'
-else:
-    raw_data_path = 'data/raw_data.csv'
-    training_data_path = 'data/training_data.csv'
-    # Use a temporary directory for testing
-    if not os.path.exists('data'):
-        os.makedirs('data')
-    training_data_save_path = os.path.join(tempfile.gettempdir(), 'training_data.csv')"""
-
 def pytest_addoption(parser):
     """
     Add command-line options.

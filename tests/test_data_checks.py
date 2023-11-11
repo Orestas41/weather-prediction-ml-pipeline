@@ -1,78 +1,81 @@
 import pytest
-from datetime import datetime
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 import pandas as pd
+from tempfile import NamedTemporaryFile
 import sys
 
+# Add the path to the directory containing the script you want to test
 sys.path.append("/home/orestas41/weather-prediction-ml-pipeline/data_checks")
 
-# Import the module containing the fixtures and functions to be tested
-from conftest import pytest_addoption, data, ref_data, threshold
+# Import the module you want to test
+from conftest import pytest_addoption
+from test_data import (
+    test_format,
+    test_city_range,
+    test_weathercode_range,
+    test_temperature_range,
+    test_precipitation_range,
+    #test_similar_distrib,
+)
 
-# Define a test fixture for the command line options
 @pytest.fixture
-def parser():
-    class Parser:
-        def addoption(self, *args, **kwargs):
-            pass
-    return Parser()
+def mock_wandb():
+    with patch('conftest.wandb.init') as mock_wandb_init:
+        yield mock_wandb_init
 
-# Test for pytest_addoption function
-def test_pytest_addoption(parser):
+@pytest.fixture
+def mock_run(mock_wandb):
+    mock_run = MagicMock()
+    mock_wandb.return_value = mock_run
+    return mock_run
+
+def test_pytest_addoption():
+    # Mocking the pytest parser
+    parser = MagicMock()
     pytest_addoption(parser)
-    # Add your assertions here based on the expected behavior of pytest_addoption
 
-# Test for the 'data' fixture
+    # Assert that the parser has the expected calls
+    assert call('--csv', action='store') in parser.addoption.call_args_list
+    assert call('--ref', action='store') in parser.addoption.call_args_list
+    assert call('--kl_threshold', action='store', type=float) in parser.addoption.call_args_list
+
+# Mock data for testing
 @pytest.fixture
-def mock_wandb_init(monkeypatch):
-    monkeypatch.setattr("conftest.wandb.init", MagicMock(return_value=MagicMock(file=MagicMock())))
-
-"""@pytest.fixture
-def data(monkeypatch):
-    monkeypatch.setattr("data/training_data.csv")
-
-@pytest.fixture
-def ref_data(monkeypatch):
-    monkeypatch.setattr("data/training_data.csv")
+def data(mock_run):
+    return pd.read_csv('tests/mock_data.csv')
 
 @pytest.fixture
-def threshold(monkeypatch):
-    monkeypatch.setattr(0.5)"""
+def mock_ref_data(mock_run):
+    data = pd.read_csv('tests/mock_data.csv')
+    return data
 
-@pytest.mark.usefixtures("mock_wandb_init")
-def test_data_fixture(data):
-    # Set up mock objects
-    #request.config.option.csv = "data/training_data.csv"
-    
-    # Call the fixture
-    #result = data(data)
-    
-    # Add assertions based on the expected behavior of the 'data' fixture
-    assert isinstance(data, pd.DataFrame)
-    # Add more assertions as needed
+@pytest.fixture
+def mock_threshold():
+    return 0.5
 
-# Test for the 'ref_data' fixture
-@pytest.mark.usefixtures("mock_wandb_init")
-def test_ref_data_fixture(ref_data):
-    # Set up mock objects
-    #request.config.option.ref = "data/training_data.csv"
-    
-    # Call the fixture
-    #result = ref_data(ref_data)
-    
-    # Add assertions based on the expected behavior of the 'ref_data' fixture
-    assert isinstance(ref_data, pd.DataFrame)
-    # Add more assertions as needed
+def test_test_format(data):
+    test_format(data)  # No assertion errors indicate success
 
-# Test for the 'threshold' fixture
-def test_threshold_fixture(threshold):
-    # Set up mock objects
-    #request.config.option.kl_threshold = 0.5
-    
-    # Call the fixture
-    #result = threshold(request)
-    
-    # Add assertions based on the expected behavior of the 'threshold' fixture
-    assert isinstance(threshold, float)
-    assert threshold == 0.5  # Adjust based on your expected threshold
-    # Add more assertions as needed
+def test_test_city_range(data):
+    test_city_range(data)  # No assertion errors indicate success
+
+def test_test_weathercode_range(data):
+    test_weathercode_range(data)  # No assertion errors indicate success
+
+def test_test_temperature_range(data):
+    test_temperature_range(data)  # No assertion errors indicate success
+
+def test_test_precipitation_range(data):
+    test_precipitation_range(data)  # No assertion errors indicate success
+
+
+
+"""def test_test_similar_distrib(mock_data, mock_ref_data, mock_threshold):
+    with patch('your_module.LOGGER') as mock_logger:
+        test_similar_distrib(mock_data, mock_ref_data, mock_threshold)
+        
+        # Add assertions based on your specific implementation
+    assert mock_logger.info.called_with("Testing of the distribution of the dataset is similar to what is expected")
+    assert mock_logger.info.called_with("Finished data checks")
+"""
+

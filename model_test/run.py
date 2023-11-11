@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
 import wandb
+import tempfile
 import argparse
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
@@ -28,6 +29,21 @@ def go(ARGS):
     Test model perfromance and promote to production if better than previous models
     """
     LOGGER.info("6 - Running model testing step")
+
+    LOGGER.info("Setting up file locations according to the environment")
+    if not os.getenv('TESTING'):
+        performance_report_path = '../reports/model_performance.csv'
+        performance_report_save_path = '../reports/model_performance.csv'
+        prod_model_path = "../prod_model_dir"
+        performance_plot_path = "../reports/model_performance.png"
+    else:
+        performance_report_path = 'reports/model_performance.csv'
+        # Use a temporary directory for testing
+        if not os.path.exists('data'):
+            os.makedirs('data')
+        performance_report_save_path = os.path.join(tempfile.gettempdir(), 'model_performance.csv')
+        prod_model_path = os.path.join(tempfile.gettempdir(), "prod_model_dir")
+        performance_plot_path = os.path.join(tempfile.gettempdir(), "model_performance.png")
 
     run = wandb.init(job_type="model_test")
     run.config.update(ARGS)
@@ -66,13 +82,12 @@ def go(ARGS):
     for val in X_test['city'].unique():
         idx = X_test['city'] == val
         # Do the inference and Compute the metrics
-        preds = model.predict(X_test[idx])
-        slice_mae[val] = mean_absolute_error(y_test[idx], preds)
+        slice_mae[val] = mean_absolute_error(y_test[idx], y_pred[idx])
         LOGGER.info("MAE of slices: %s", slice_mae[val])
 
     LOGGER.info("Testing data drift. Expecting results to be False")
     # Opening model performance log
-    perf = pd.read_csv('../reports/model_performance.csv', index_col=0)
+    perf = pd.read_csv(performance_report_path, index_col=0)
 
     # Raw comparison test
     raw_comp = r_squared < np.min(perf['Score'])
@@ -91,7 +106,7 @@ def go(ARGS):
     LOGGER.info(
         "Saving the latest model performance metrics")
     date = datetime.now().strftime('%Y-%m-%d')
-    with open('../reports/model_performance.csv', 'a', newline='') as csvfile:
+    with open(performance_report_save_path, 'a', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow([date, r_squared, mae])
 
@@ -100,17 +115,17 @@ def go(ARGS):
     # If the MAE score of the latest model is smaller (better performace) than
     # any other models MAE, then this model is promoted to production model
     if mae <= perf['MAE'].min() or raw_comp or param_signific or nonparam:
-        if os.path.exists("../prod_model_dir"):
-            shutil.rmtree("../prod_model_dir")
+        if os.path.exists(prod_model_path):
+            shutil.rmtree(prod_model_path)
         LOGGER.info("Model performance is better than previous model. Promoting new model to production")
-        mlflow.sklearn.save_model(model, "../prod_model_dir")
+        mlflow.sklearn.save_model(model, prod_model_path)
     else:
         pass
 
     
     LOGGER.info(
         "Generating plot that displays the change in model performance over time")
-    performance = pd.read_csv("../reports/model_performance.csv")
+    performance = pd.read_csv(performance_report_path)
     plt.plot(performance["Date"], performance["Score"], label="Score")
     plt.plot(performance["Date"], performance["MAE"], label="MAE")
     plt.legend()
@@ -119,7 +134,7 @@ def go(ARGS):
     plt.title("Change in ML Model Performance")
 
     # Save the plot
-    plt.savefig("../reports/model_performance.png")
+    plt.savefig(performance_plot_path)
 
     # Logging MAE and r2
     run.summary['r2'] = r_squared

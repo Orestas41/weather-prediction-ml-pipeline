@@ -23,6 +23,7 @@ def test_format(data):
     """
     Test the format of values is correct
     """
+    print('test')
     LOGGER.info("Testing if the format of the values are correct")
     # Convert the index of the DataFrame to a datetime
     # Check if the index is in correct format
