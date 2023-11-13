@@ -65,7 +65,6 @@ def go(args):
         data = json.loads(data.decode("utf-8"))
         data = pd.DataFrame(data['daily'])
         data["city"] = config['cities'][i]['id']
-        #data['city'] = data['city']
         df_merged = pd.concat([df_merged, data])
 
     LOGGER.info("Saving merged data as csv file")

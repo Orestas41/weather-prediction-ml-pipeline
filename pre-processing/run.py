@@ -42,9 +42,7 @@ def create_month_day_column(data):
     Returns:
         The DataFrame with the date column converted to a datetime object.
     """
-    data['month-day'] = data['time'].dt.strftime('%m-%d')
-    data['month-day'] = pd.to_datetime(data['month-day'], format='%m-%d')
-    data['month-day'] = pd.to_datetime(data['month-day']).dt.strftime('%m%d').astype(int)
+    data['month-day'] = data['time'].dt.strftime('%m%d').astype(int)
     return data
 
 def set_date_index(data):

@@ -9,3 +9,4 @@ dependencies:
   - scikit-learn=1.2.2
   - matplotlib-base=3.8
   - wandb==0.15.12
+  - xgboost=1.7.3

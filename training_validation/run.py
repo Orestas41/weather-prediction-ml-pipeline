@@ -14,8 +14,8 @@ import argparse
 import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
+from xgboost import XGBRegressor
 
 # Set up logging
 logging.basicConfig(
@@ -34,12 +34,12 @@ def go(ARGS):
         project="weather-prediction",
         job_type="training_validation")
     run.config.update(ARGS)
-    print(ARGS.model_config)
-    # Getting the <MODEL> configuration and updating W&B
+
+    # Getting the XGBRegressor configuration and updating W&B
     with open(ARGS.model_config) as file:
         model_config = json.load(file)
     run.config.update(model_config)
-    print(model_config)
+
     LOGGER.info(
         "Fetching %s and setting it as dataframe", ARGS.trainval_artifact)
     trainval_local_path = run.use_artifact(ARGS.trainval_artifact).file()
@@ -59,9 +59,8 @@ def go(ARGS):
     X_train.set_index('time', inplace=True)
     X_val.set_index('time', inplace=True)
 
-    LOGGER.info("Preparing <MODEL> model")
-    #model = <MODEL>(**model_config)
-    model = RandomForestRegressor()
+    LOGGER.info("Preparing XGBRegressor model")
+    model = XGBRegressor(**model_config)
 
     LOGGER.info("Fitting")
     model.fit(X_train, y_train)

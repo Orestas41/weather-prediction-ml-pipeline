@@ -94,7 +94,7 @@ def go(config: DictConfig):
             model_config = os.path.abspath("config.yaml")
             with open(model_config, "w+") as file:
                 json.dump(
-                    dict(config["modeling"]["linearRegression"].items()), file)
+                    dict(config["modeling"]["XGBRegressor"].items()), file)
             _ = mlflow.run(
                 os.path.join(
                     hydra.utils.get_original_cwd(),

@@ -11,12 +11,14 @@ data_segregation:
   test_size: 0.3
 modeling:
   # Fraction of remaining data to use for validation
-  val_size: 0.2
-  linearRegression:
-    fit_intercept: True
-    copy_X: True
-    normalize: True
-    positive: False
+  val_size: 0.3
+  XGBRegressor:
+    learning_rate: 0.095
+    max_depth: 9
+    subsample: 0.95
+    n_estimators: 150
+    gamma: 0.3
+    reg_alpha: 0.43
 cities:
   London:
     id: 1

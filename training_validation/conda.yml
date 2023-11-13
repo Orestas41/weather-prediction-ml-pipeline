@@ -9,3 +9,4 @@ dependencies:
   - matplotlib-base=3.8
   - numpy=1.26.0
   - wandb==0.15.12
+  - xgboost=1.7.3
