@@ -10,6 +10,7 @@ sys.path.append("/home/orestas41/weather-prediction-ml-pipeline/pre-processing")
 # Import the 'go' function from run.py
 from run import go, convert_date_column, create_month_day_column, set_date_index, merge_datasets, remove_na, drop_duplicates, sort_by_date
 
+
 # Test the convert_date_column function
 def test_convert_date_column():
     data = pd.DataFrame({'time': ['2023-01-01', '2023-01-02'], 'value': [1, 2]})
@@ -23,7 +24,7 @@ def test_create_month_day_column():
     data = convert_date_column(data)
     result = create_month_day_column(data)
     assert 'month-day' in result.columns
-    assert result['month-day'].dtype == int
+    assert result['month-day'].dtype == float
 
 # Test the set_date_index function
 def test_set_date_index():
@@ -56,7 +57,6 @@ def test_sort_by_date():
     data = convert_date_column(data)
     data = set_date_index(data)
     result = sort_by_date(data)
-    #assert result.index[0] == '2023-01-01'
     assert result.index[0] == pd.Timestamp('2023-01-01')
 
 # Test the go function

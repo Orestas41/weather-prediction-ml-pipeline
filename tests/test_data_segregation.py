@@ -24,24 +24,27 @@ def test_go(mock_wandb, mock_train_test_split):
     # Set up test data
     os.environ['TESTING'] = '1'
     args = MagicMock()
-    args.input = "data/training_data.csv"
+    args.input = "tests/mock_data.csv"
     args.test_size = 0.5
 
     mock_run = MagicMock()
     mock_wandb.return_value = mock_run
 
     mock_artifact = MagicMock()
-    mock_artifact.file.return_value = "data/training_data.csv"
+    mock_artifact.file.return_value = "tests/mock_data.csv"
     mock_run.use_artifact.return_value = mock_artifact
 
-    mock_dataframe = pd.DataFrame({"time": ["2022-01-01", "2022-01-02"], "value": [1, 2]})
+    data = pd.read_csv('tests/mock_data.csv')
+    data.set_index('time', inplace=True)
+
+    mock_dataframe = data
     mock_train_test_split.return_value = (mock_dataframe, mock_dataframe)  # Replace with your desired dataframe
 
     # Run the function
     go(args)
 
     # Assertions
-    assert mock_run.use_artifact.called_with("data/training_data.csv")
+    assert mock_run.use_artifact.called_with("tests/mock_data.csv")
     assert mock_train_test_split.called_with(mock_dataframe, test_size=0.5)
     assert mock_run.log_artifact.called_with('trainval_data.csv')
 

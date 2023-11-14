@@ -17,7 +17,6 @@ logging.basicConfig(
     level=logging.INFO)
 LOGGER = logging.getLogger()
 
-
 def go(ARGS):
     """
     Splits the provided dataframe into test and remainder sets
@@ -50,9 +49,6 @@ def go(ARGS):
         data_frame,
         test_size=ARGS.test_size,
     )
-
-    #trainval.set_index('time', inplace=True)
-    #test.set_index('time', inplace=True)
 
     trainval.to_csv(trainval_path, index=False)
     test.to_csv(test_path, index=False)

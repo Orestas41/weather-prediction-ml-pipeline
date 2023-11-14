@@ -1,17 +1,16 @@
+import os
 import wandb
 import pandas as pd
-from datetime import datetime, timedelta
 from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 import numpy as np
 
-"""run = wandb.init(
-    project="weather-prediction",
-    job_type="model-tuning")"""
-
 def train_model():
+
+    os.environ["WANDB_PROJECT"] = "weather-prediction"
+    os.environ["WANDB_RUN_GROUP"] = 'regression model tuning'
 
     df = pd.read_csv('data/training_data.csv')
 
@@ -24,8 +23,7 @@ def train_model():
     X_train.set_index('time', inplace=True)
     X_val.set_index('time', inplace=True)   
 
-    run = wandb.init(config=sweep_config,project="weather-prediction",
-    job_type="model-tuning")
+    run = wandb.init(config=sweep_config)
 
     config = run.config
 
@@ -44,8 +42,6 @@ def train_model():
     }
 
     model = XGBRegressor(**params)
-
-
 
     model.fit(X_train, y_train, eval_set=[(X_val, y_val)], early_stopping_rounds=config.early_stopping_rounds, verbose=False)
     

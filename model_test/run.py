@@ -49,40 +49,51 @@ def go(ARGS):
     run.config.update(ARGS)
 
     LOGGER.info(
-        "Downloading model- %s and data- %s artifacts",
-        ARGS.mlflow_model,
+        "Downloading models- %s, %s and data- %s artifacts",
+        ARGS.reg_model,
+        ARGS.class_model,
         ARGS.test_dataset
     )
     # Downloading model artifact
-    model_local_path = run.use_artifact(ARGS.mlflow_model).download()
+    reg_model_local_path = run.use_artifact(ARGS.reg_model).download()
+    class_model_local_path = run.use_artifact(ARGS.class_model).download()
     # Downloading test dataset
     test_dataset_path = run.use_artifact(ARGS.test_dataset).file()
 
     df = pd.read_csv(test_dataset_path)
 
-    LOGGER.info("Setting feature and target columns")
-    X_test = df.drop(['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'], axis=1)
-    y_test = df[['time','weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
+    df.set_index('time', inplace=True)
 
-    X_test.set_index('time', inplace=True)
-    y_test.set_index('time', inplace=True)
+    LOGGER.info("Setting feature and target columns")
+    reg_X_test = df.drop(['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'], axis=1)
+    reg_y_test = df[['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
+
+    class_X_test = df.drop(['weathercode'], axis=1)
+    class_y_test = df[['weathercode']]
 
     LOGGER.info("Loading model and performing inference on test set")
-    model = mlflow.sklearn.load_model(model_local_path)
-    y_pred = model.predict(X_test)
+    reg_model = mlflow.sklearn.load_model(reg_model_local_path)
+    class_model = mlflow.sklearn.load_model(class_model_local_path)
+    reg_y_pred = reg_model.predict(reg_X_test)
+    class_y_pred = class_model.predict(class_X_test)
 
     LOGGER.info("Scoring")
-    r_squared = model.score(X_test, y_test)
-    LOGGER.info("Score: %s", r_squared)
-    mae = mean_absolute_error(y_test, y_pred)
-    LOGGER.info("MAE: %s", mae)
+    reg_r_squared = reg_model.score(reg_X_test, reg_y_test)
+    class_r_squared = class_model.score(class_X_test, class_y_test)
+    LOGGER.info("Regression Score: %s", reg_r_squared)
+    LOGGER.info("Classification Score: %s", class_r_squared)
+
+    reg_mae = mean_absolute_error(reg_y_test, reg_y_pred)
+    class_mae = mean_absolute_error(class_y_test, class_y_pred)
+    LOGGER.info("Regression MAE: %s", reg_mae)
+    LOGGER.info("Classification MAE: %s", class_mae)
 
     LOGGER.info("Running data slice tests")
     slice_mae = {}
-    for val in X_test['city'].unique():
-        idx = X_test['city'] == val
+    for val in reg_X_test['city'].unique():
+        idx = reg_X_test['city'] == val
         # Do the inference and Compute the metrics
-        slice_mae[val] = mean_absolute_error(y_test[idx], y_pred[idx])
+        slice_mae[val] = mean_absolute_error(reg_y_test[idx], reg_y_pred[idx])
         LOGGER.info("MAE of slices: %s", slice_mae[val])
 
     LOGGER.info("Testing data drift. Expecting results to be False")
@@ -90,17 +101,17 @@ def go(ARGS):
     perf = pd.read_csv(performance_report_path, index_col=0)
 
     # Raw comparison test
-    raw_comp = r_squared < np.min(perf['Score'])
+    raw_comp = reg_r_squared < np.min(perf['Score'])
     LOGGER.info("Raw comparison: %s", raw_comp)
 
     # Parametric significance test
-    param_signific = r_squared < np.mean(
+    param_signific = reg_r_squared < np.mean(
         perf['Score']) - 2 * np.std(perf['Score'])
     LOGGER.info("Parametric significance: %s", param_signific)
 
     # Non-parametric outlier test
     iqr = np.quantile(perf['Score'], 0.75) - np.quantile(perf['Score'], 0.25)
-    nonparam = r_squared < np.quantile(perf['Score'], 0.25) - iqr * 1.5
+    nonparam = reg_r_squared < np.quantile(perf['Score'], 0.25) - iqr * 1.5
     LOGGER.info("Non-parametric outlier: %s", nonparam)
 
     LOGGER.info(
@@ -108,17 +119,17 @@ def go(ARGS):
     date = datetime.now().strftime('%Y-%m-%d')
     with open(performance_report_save_path, 'a', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow([date, r_squared, mae])
+        writer.writerow([date, reg_r_squared, reg_mae])
 
     LOGGER.info(
         "Checking if the new model is perfroming better than previous models")
     # If the MAE score of the latest model is smaller (better performace) than
     # any other models MAE, then this model is promoted to production model
-    if mae <= perf['MAE'].min() or raw_comp or param_signific or nonparam:
+    if reg_mae <= perf['MAE'].min() or raw_comp or param_signific or nonparam:
         if os.path.exists(prod_model_path):
             shutil.rmtree(prod_model_path)
         LOGGER.info("Model performance is better than previous model. Promoting new model to production")
-        mlflow.sklearn.save_model(model, prod_model_path)
+        mlflow.sklearn.save_model(reg_model, prod_model_path)
     else:
         pass
 
@@ -137,8 +148,10 @@ def go(ARGS):
     plt.savefig(performance_plot_path)
 
     # Logging MAE and r2
-    run.summary['r2'] = r_squared
-    run.summary['mae'] = mae
+    run.summary['reg_r2'] = reg_r_squared
+    run.summary['reg_mae'] = reg_mae
+    run.summary['class_r2'] = class_r_squared
+    run.summary['class_mae'] = class_mae
     run.summary["Raw comparison"] = raw_comp
     run.summary["Parametric significance"] = param_signific
     run.summary["Non-parametric outlier"] = nonparam
@@ -155,7 +168,14 @@ if __name__ == "__main__":
         description="Test the provided model against the test dataset")
 
     PARSER.add_argument(
-        "--mlflow_model",
+        "--reg_model",
+        type=str,
+        help="Input MLFlow model",
+        required=True
+    )
+
+    PARSER.add_argument(
+        "--class_model",
         type=str,
         help="Input MLFlow model",
         required=True

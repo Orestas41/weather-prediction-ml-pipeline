@@ -19,16 +19,17 @@ def mock_wandb():
         yield mock_wandb_init
 
 @pytest.fixture
-def mock_mlflow():
+def mock_model():
     with patch('run.mlflow.sklearn.load_model') as mock_load_model:
         yield mock_load_model
 
-def test_go(mock_wandb, mock_mlflow):
+def test_go(mock_wandb, mock_model):
     # Set up test data
     os.environ['TESTING'] = '1'
 
     args = MagicMock()
-    args.mlflow_model = "model_export"
+    args.reg_model = "reg_model"
+    args.class_model = 'class_model'
     args.test_dataset = "tests/mock_data.csv"
 
     mock_run = MagicMock()
@@ -39,14 +40,20 @@ def test_go(mock_wandb, mock_mlflow):
     mock_run.use_artifact.return_value = mock_artifact
 
     # Mock the mlflow.sklearn.load_model function
+    model = MagicMock()
+    mock_model.return_value = model
     mock_model = MagicMock()
-    mock_mlflow.return_value = mock_model
+    mock_model.return_value = model
 
     data = pd.read_csv('tests/mock_data.csv')
-    data.set_index('time', inplace=True)
 
-    mock_model.predict.return_value = data[['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
-    mock_model.score.return_value = 1.1
+    model.predict.return_value = data[['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
+    model.predict.return_value = data['weathercode']
+    
+    model.score.return_value = 1.1
+
+    #
+    model.score.return_value = 1.1
 
     # Run the function
     go(args)

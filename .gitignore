@@ -35,8 +35,11 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Reports
+# Folders
 reports/*
+data/*
+training_validation/class_model_dir/*
+training_validation/reg_model_dir/*
 
 # Unit test / coverage reports
 htmlcov/

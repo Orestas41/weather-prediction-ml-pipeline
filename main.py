@@ -91,10 +91,14 @@ def go(config: DictConfig):
 
         if "training_validation" in active_steps:
 
-            model_config = os.path.abspath("config.yaml")
-            with open(model_config, "w+") as file:
+            reg_model_config = os.path.abspath("config.yaml")
+            with open(reg_model_config, "w+") as file:
                 json.dump(
                     dict(config["modeling"]["XGBRegressor"].items()), file)
+            class_model_config = os.path.abspath("config.yaml")
+            with open(class_model_config, "w+") as file:
+                json.dump(
+                    dict(config["modeling"]["RandomForestClassifier"].items()), file)
             _ = mlflow.run(
                 os.path.join(
                     hydra.utils.get_original_cwd(),
@@ -103,8 +107,8 @@ def go(config: DictConfig):
                 parameters={
                     "trainval_artifact": "trainval_data.csv:latest",
                     "val_size": config["modeling"]["val_size"],
-                    "model_config": model_config,
-                    "output_artifact": "model_export"},
+                    "reg_model_config": reg_model_config,
+                    "class_model_config": class_model_config},
             )
 
         if "model_test" in active_steps:
@@ -115,7 +119,8 @@ def go(config: DictConfig):
                     "model_test"),
                 "main",
                 parameters={
-                    "mlflow_model": "model_export:latest",
+                    "reg_model": "reg_model:latest",
+                    "class_model": "class_model:latest",
                     "test_dataset": "test_data.csv:latest"},
             )
 
@@ -126,7 +131,8 @@ def go(config: DictConfig):
                     "batch_prediction"),
                 "main",
                 parameters={
-                    "mlflow_model": "model_export:prod",
+                    "reg_model": "reg_model:prod",
+                    "class_model": "class_model:prod",
                     "full_dataset": "training_data.csv:latest"
                 },
             )

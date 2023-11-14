@@ -15,7 +15,7 @@ from test_data import (
     test_weathercode_range,
     test_temperature_range,
     test_precipitation_range,
-    #test_similar_distrib,
+    test_similar_distrib,
 )
 
 @pytest.fixture
@@ -45,12 +45,12 @@ def data(mock_run):
     return pd.read_csv('tests/mock_data.csv')
 
 @pytest.fixture
-def mock_ref_data(mock_run):
+def ref_data(mock_run):
     data = pd.read_csv('tests/mock_data.csv')
     return data
 
 @pytest.fixture
-def mock_threshold():
+def threshold(mock_run):
     return 0.5
 
 def test_test_format(data):
@@ -68,14 +68,6 @@ def test_test_temperature_range(data):
 def test_test_precipitation_range(data):
     test_precipitation_range(data)  # No assertion errors indicate success
 
-
-
-"""def test_test_similar_distrib(mock_data, mock_ref_data, mock_threshold):
-    with patch('your_module.LOGGER') as mock_logger:
-        test_similar_distrib(mock_data, mock_ref_data, mock_threshold)
-        
-        # Add assertions based on your specific implementation
-    assert mock_logger.info.called_with("Testing of the distribution of the dataset is similar to what is expected")
-    assert mock_logger.info.called_with("Finished data checks")
-"""
+def test_test_similar_distrib(data, ref_data, threshold):
+    test_similar_distrib(data, ref_data, threshold)
 

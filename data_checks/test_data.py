@@ -23,7 +23,6 @@ def test_format(data):
     """
     Test the format of values is correct
     """
-    print('test')
     LOGGER.info("Testing if the format of the values are correct")
     # Convert the index of the DataFrame to a datetime
     # Check if the index is in correct format
@@ -49,7 +48,6 @@ def test_weathercode_range(data):
     Test the range of winner values
     """
     LOGGER.info("Testing if the values of Winner column are correct")
-
     # Checking that winner values are between 0 and 1
     assert data['weathercode'].min() >= 0 and data['weathercode'].max() <= 99
 
@@ -71,20 +69,20 @@ def test_precipitation_range(data):
     assert 0 <= data['precipitation_sum'].any() < 60
     assert 0 <= data['precipitation_sum'].any() < 60
 
-"""
+
 def test_similar_distrib(
-data: pd.DataFrame,
-ref_data: pd.DataFrame,
-threshold: float):
-"""
-#Applying a threshold on the KL divergence to detect if the distribution of the new data is
-#significantly different than that of the reference dataset
-"""
-LOGGER.info(
-    "Testing of the distribution of the dataset is similar to what is expected")
-dist1 = data['precipitation_sum'].value_counts().sort_index()
-dist2 = ref_data['precipitation_sum'].value_counts().sort_index()
-# Checking if the distribution difference is less than the k1 threshold
-assert scipy.stats.entropy(dist1, dist2, base=2) < threshold
-"""
-    #LOGGER.info("Finished data checks")
+    data: pd.DataFrame,
+    ref_data: pd.DataFrame,
+    threshold: float):
+    """
+    #Applying a threshold on the KL divergence to detect if the distribution of the new data is
+    #significantly different than that of the reference dataset
+    """
+    LOGGER.info(
+        "Testing of the distribution of the dataset is similar to what is expected")
+    dist1 = data['precipitation_sum'].value_counts().sort_index()
+    dist2 = ref_data['precipitation_sum'].value_counts().sort_index()
+    # Checking if the distribution difference is less than the k1 threshold
+    assert scipy.stats.entropy(dist1, dist2, base=2) < threshold
+
+    LOGGER.info("Finished data checks")

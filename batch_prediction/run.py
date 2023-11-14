@@ -49,12 +49,14 @@ def go(ARGS):
     run.config.update(ARGS)
 
     LOGGER.info(
-        "Downloading model- %s and data- %s artifacts",
-        ARGS.mlflow_model,
+        "Downloading models- %s, %s and data- %s artifacts",
+        ARGS.reg_model,
+        ARGS.class_model,
         ARGS.full_dataset
     )
     # Downloading model artifact
-    model_local_path = run.use_artifact(ARGS.mlflow_model).download()
+    reg_model_local_path = run.use_artifact(ARGS.reg_model).download()
+    class_model_local_path = run.use_artifact(ARGS.class_model).download()
     # Downloading test dataset
     full_dataset_path = run.use_artifact(ARGS.full_dataset).file()
 
@@ -120,19 +122,33 @@ def go(ARGS):
     prediction['city'] = predicted_data['city'][0]
 
     LOGGER.info("Inference")
-    model = mlflow.sklearn.load_model(model_local_path)
-    preds = model.predict(prediction)
+    reg_model = mlflow.sklearn.load_model(reg_model_local_path)
+    class_model = mlflow.sklearn.load_model(class_model_local_path)
+    reg_pred = reg_model.predict(prediction)
 
-    prediction['predicted_weathercode'] = 0
-    prediction['predicted_temperature_2m_max'] = 0
-    prediction['predicted_temperature_2m_min'] = 0
-    prediction['predicted_precipitation_sum'] = 0
+    prediction['temperature_2m_max'] = 0
+    prediction['temperature_2m_min'] = 0
+    prediction['precipitation_sum'] = 0
 
-    for i in range(len(preds)):
-        prediction['predicted_weathercode'][i] = preds[i][0]
-        prediction['predicted_temperature_2m_max'][i] = preds[i][1]
-        prediction['predicted_temperature_2m_min'][i] = preds[i][2]
-        prediction['predicted_precipitation_sum'][i] = preds[i][3]
+    for i in range(len(reg_pred)):
+        prediction['temperature_2m_max'][i] = reg_pred[i][0]
+        prediction['temperature_2m_min'][i] = reg_pred[i][1]
+        prediction['precipitation_sum'][i] = reg_pred[i][2]
+
+    prediction = prediction[['temperature_2m_max','temperature_2m_min','precipitation_sum','month-day','city']]
+
+    class_pred = class_model.predict(prediction)
+
+    prediction['weathercode'] = 0
+    
+    for i in range(len(class_pred)):
+        prediction['weathercode'][i] = class_pred[i]
+
+
+    prediction = prediction.rename(columns = {'temperature_2m_max':'predicted_temperature_2m_max',
+                                                'weathercode':'predicted_weathercode',
+                                                'temperature_2m_min':'predicted_temperature_2m_min',
+                                                'precipitation_sum':'predicted_precipitation_sum',})
 
     LOGGER.info("Average Weathercode prediction: %s", prediction['predicted_weathercode'].mean())
     LOGGER.info("Average Max temperature prediction: %s", prediction['predicted_temperature_2m_max'].mean())
@@ -174,7 +190,14 @@ if __name__ == "__main__":
         description="This step scrapes the latest data from the web")
 
     PARSER.add_argument(
-        "--mlflow_model",
+        "--reg_model",
+        type=str,
+        help="Input MLFlow model",
+        required=True
+    )
+
+    PARSER.add_argument(
+        "--class_model",
         type=str,
         help="Input MLFlow model",
         required=True

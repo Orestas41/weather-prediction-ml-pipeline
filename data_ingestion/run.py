@@ -53,8 +53,8 @@ def go(args):
     headers = {}
 
     city = config['cities']
-    start = date - timedelta(days=8)
-    end = date - timedelta(days=2)
+    end = date - timedelta(days=7)
+    start = end - timedelta(days=7)
     df_merged = pd.DataFrame()
 
     for i in city:

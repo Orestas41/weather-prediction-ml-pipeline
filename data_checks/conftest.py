@@ -2,8 +2,6 @@
 This script defines shared fixtures and configuration options for test files
 """
 # pylint: disable=E1101, E0401
-import os
-import tempfile
 import wandb
 import pytest
 import pandas as pd
