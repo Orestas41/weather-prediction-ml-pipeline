@@ -10,7 +10,7 @@ import pandas as pd
 
 # Setting up logging
 logging.basicConfig(
-    filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
+    filename=f"../{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.ERROR)
 LOGGER = logging.getLogger()
 

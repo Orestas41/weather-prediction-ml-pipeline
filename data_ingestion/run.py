@@ -17,10 +17,9 @@ date = datetime.now()
 
 # Setting up logging
 logging.basicConfig(
-    filename=f"../reports/logs/{date.strftime('%Y-%m-%d')}.log",
+    filename=f"../{date.strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
 LOGGER = logging.getLogger()
-
 
 def go(args):
     """
@@ -33,16 +32,12 @@ def go(args):
     LOGGER.info("Setting up file locations according to the environment")
     if not os.getenv('TESTING'):
         config_path = '../config.yaml'
-        data_save_path = '../data/raw_data.csv'
-        report_save_path = "../reports/ingested_data.txt"
     else:
         config_path = 'config.yaml'
-        # Use a temporary directory for testing
-        if not os.path.exists('data'):
-            os.makedirs('data')
-        data_save_path = os.path.join(tempfile.gettempdir(), 'raw_data.csv')
-        report_save_path = os.path.join(tempfile.gettempdir(), 'ingested_data.txt')    
-    
+
+    LOGGER.info("Fetching %s artifact", args.ingestion_records)
+    ingestion_records_path = run.use_artifact(args.ingestion_records).file()
+
     # Opening configuration file
     with open(config_path, 'r') as file:
             config = yaml.load(file, Loader=yaml.FullLoader)
@@ -55,7 +50,7 @@ def go(args):
     city = config['cities']
     end = date - timedelta(days=7)
     start = end - timedelta(days=7)
-    df_merged = pd.DataFrame()
+    raw_data = pd.DataFrame()
 
     for i in city:
         LOGGER.info(f"Pulling weather data for {i}")
@@ -65,15 +60,31 @@ def go(args):
         data = json.loads(data.decode("utf-8"))
         data = pd.DataFrame(data['daily'])
         data["city"] = config['cities'][i]['id']
-        df_merged = pd.concat([df_merged, data])
-
-    LOGGER.info("Saving merged data as csv file")
-    df_merged.to_csv(data_save_path, index=False)
+        raw_data = pd.concat([raw_data, data])
 
     LOGGER.info("Saving ingestion range record")
-    data_record = open(
-        report_save_path,"w")
-    data_record.write(str(date.strftime('%Y-%m-%d')) + f' - data pulled from {start.strftime("%Y-%m-%d")} to {end.strftime("%Y-%m-%d")}' + '\n')
+    ingestion_records = pd.read_csv(ingestion_records_path)
+    ingestion_records = ingestion_records.assign(Date= [date.strftime('%Y-%m-%d')])
+    ingestion_records = ingestion_records.assign(Start= [start.strftime('%Y-%m-%d')])
+    ingestion_records = ingestion_records.assign(End= [end.strftime('%Y-%m-%d')])
+    
+    for file_name, k, desc in zip([raw_data,ingestion_records],
+                                  ['raw_data.csv', 'ingestion_records.csv'],
+                                  ['raw_data','ingestion_records']):
+        LOGGER.info("Uploading %s", desc)
+        with tempfile.NamedTemporaryFile("w") as file:
+            file_name.to_csv(file.name, index=False)
+            artifact = wandb.Artifact(
+                k,
+                type=desc,
+                description=desc,
+            )
+            artifact.add_file(file.name)
+            run.log_artifact(artifact)
+            if not os.getenv('TESTING'):
+                artifact.wait()
+            else:
+                pass
 
     LOGGER.info("Data ingestion finished")
 
@@ -82,6 +93,8 @@ if __name__ == "__main__":
 
     PARSER = argparse.ArgumentParser(
         description="This step scrapes the latest data from the web")
+    
+    PARSER.add_argument("--ingestion_records", type=str, help="Input artifact to split")
 
     PARSER.add_argument("--step_description", type=str,
                         help="Description of the step")

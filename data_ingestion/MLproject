@@ -4,6 +4,10 @@ conda_env: conda.yml
 entry_points:
   main:
     parameters:
+      ingestion_records:
+        description: description
+        type: string
+
       step_description:
         description: This step pull the latest data from the api
         type: string
@@ -12,4 +16,4 @@ entry_points:
         description: HTTPS connection to the server with the hostname
         type: string
         
-    command: "python run.py --step_description {step_description} --hostname {hostname}"
+    command: "python run.py --ingestion_records {ingestion_records} --step_description {step_description} --hostname {hostname}"

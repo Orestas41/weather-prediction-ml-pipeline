@@ -17,7 +17,7 @@ import yaml
 
 # Set up logging
 logging.basicConfig(
-    filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
+    filename=f"../{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
 LOGGER = logging.getLogger()
 
@@ -29,22 +29,7 @@ def go(ARGS):
     """
     LOGGER.info("7 - Running weekly batch prediction and evaluation step")
 
-    LOGGER.info("Setting up file locations according to the environment")
-    if not os.getenv('TESTING'):
-        prediction_path = '../reports/next_week_prediction.csv'
-        prediction_save_path = '../reports/next_week_prediction.csv'
-        prediction_performance_path = "../reports/weekly_batch_prediction_performace.csv"
-        prediction_plot_path = '../reports/next_week_weather_prediction.png'
-    else:
-        prediction_path = 'reports/next_week_prediction.csv'
-        prediction_performance_path = "reports/weekly_batch_prediction_performace.csv"
-        # Use a temporary directory for testing
-        if not os.path.exists('data'):
-            os.makedirs('data')
-        prediction_save_path = os.path.join(tempfile.gettempdir(), 'next_week_prediction.csv')
-        prediction_plot_path = os.path.join(tempfile.gettempdir(), "next_week_weather_prediction.png")
-
-    run = wandb.init(
+    run = wandb.init(project="weather-prediction",
         job_type="batch_prediction")
     run.config.update(ARGS)
 
@@ -52,18 +37,20 @@ def go(ARGS):
         "Downloading models- %s, %s and data- %s artifacts",
         ARGS.reg_model,
         ARGS.class_model,
-        ARGS.full_dataset
+        ARGS.full_dataset,
+        ARGS.batch_prediction
     )
     # Downloading model artifact
     reg_model_local_path = run.use_artifact(ARGS.reg_model).download()
     class_model_local_path = run.use_artifact(ARGS.class_model).download()
     # Downloading test dataset
     full_dataset_path = run.use_artifact(ARGS.full_dataset).file()
-
-    prediction = pd.read_csv(full_dataset_path)
+    batch_prediction_path = run.use_artifact(ARGS.batch_prediction).file()
+    
+    latest_data = pd.read_csv(full_dataset_path)
 
     LOGGER.info("Opening last weeks predictions")
-    predicted_data = pd.read_csv(prediction_path)
+    predicted_data = pd.read_csv(batch_prediction_path)
 
     LOGGER.info("Locating prediction range")
     # Last weeks prediction range
@@ -71,8 +58,8 @@ def go(ARGS):
     end = predicted_data.iloc[-1]['time']
 
     # Finding recorded data from the range that was predicted last week
-    mask = (prediction['time'] >= start) & (prediction['time'] <= end)
-    recorded_data = prediction.loc[mask]
+    mask = (latest_data['time'] >= start) & (latest_data['time'] <= end)
+    recorded_data = latest_data.loc[mask]
 
     # Preparing features
     predicted_data.rename(columns={'weathercode':'predicted_weathercode','temperature_2m_max':'predicted_temperature_2m_max','temperature_2m_min':'predicted_temperature_2m_min','precipitation_sum':'predicted_precipitation_sum'}
@@ -101,11 +88,6 @@ def go(ARGS):
     LOGGER.info("Average Max temperature performace: %s", performance['max_temp_performace'].mean())
     LOGGER.info("Average Min temperature performace: %s", performance['min_temp_performace'].mean())
     LOGGER.info("Average Precipitation performace: %s", performance['precipitation_performace'].mean())
-
-    LOGGER.info("Saving the report on the latest tour prediction evaluations")
-    performance.to_csv(
-        prediction_performance_path,
-        index=None)
     
     LOGGER.info("Setting up prediction for the next week")
 
@@ -177,12 +159,40 @@ def go(ARGS):
     ax2.set_ylim(0, 30)
     ax.grid(True)
     ax.legend()
-    plt.savefig(prediction_plot_path)
 
-    prediction.to_csv(prediction_save_path)
+    fig = wandb.Image(plt)
+    run.log(({"plot": fig}))
+
+    for file_name, k, desc in zip([performance, prediction],
+                                  ['batch_prediction_performance.csv', 'batch_prediction.csv'],
+                                  ['batch_prediction_performance','batch_prediction']):
+        LOGGER.info("Uploading %s", desc)
+        with tempfile.NamedTemporaryFile("w") as file:
+            file_name.to_csv(file.name, index=True)
+            artifact = wandb.Artifact(
+                k,
+                type=desc,
+                description=desc,
+            )
+            artifact.add_file(file.name)
+            run.log_artifact(artifact)
+            if not os.getenv('TESTING'):
+                artifact.wait()
+            else:
+                pass
 
     LOGGER.info("Batch tour evaluations and predictions finished")
 
+    log_file = f"../{datetime.now().strftime('%Y-%m-%d')}.log"
+    log_artifact = wandb.Artifact(
+        "log_file",
+        type="log",
+        description="Log file",
+    )
+    log_artifact.add_file(log_file)
+    run.log_artifact(log_artifact)
+    
+    os.remove(f"../{datetime.now().strftime('%Y-%m-%d')}.log")
 
 if __name__ == "__main__":
 
@@ -209,6 +219,8 @@ if __name__ == "__main__":
         help="Full dataset",
         required=True
     )
+
+    PARSER.add_argument("--batch_prediction", type=str, help="Input artifact to split", required=True)
 
     ARGS = PARSER.parse_args()
 

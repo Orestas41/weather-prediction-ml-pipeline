@@ -20,7 +20,7 @@ from sklearn.ensemble import RandomForestClassifier
 
 # Set up logging
 logging.basicConfig(
-    filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
+    filename=f"../{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
 LOGGER = logging.getLogger()
 
@@ -35,17 +35,6 @@ def go(ARGS):
         project="weather-prediction",
         job_type="training_validation")
     run.config.update(ARGS)
-
-    LOGGER.info("Setting up file locations according to the environment")
-    if not os.getenv('TESTING'):
-        reg_model_path = 'reg_model_dir'
-        class_model_path = "class_model_dir"
-    else:
-        # Use a temporary directory for testing
-        if not os.path.exists('data'):
-            os.makedirs('data')
-        reg_model_path = os.path.join(tempfile.gettempdir(), 'reg_model_dir')
-        class_model_path = os.path.join(tempfile.gettempdir(), "class_model_dir")
 
     # Getting the XGBRegressor configuration and updating W&B
     with open(ARGS.reg_model_config) as file:
@@ -62,14 +51,11 @@ def go(ARGS):
 
     df = pd.read_csv(trainval_local_path)
 
-    LOGGER.info("Setting feature and target columns")
+    df.set_index('time', inplace=True)
 
     LOGGER.info('Splitting data into training and validation')
     X_train, X_val, y_train, y_val = train_test_split(
         df, df, test_size=ARGS.val_size)
-
-    X_train.set_index('time', inplace=True)
-    X_val.set_index('time', inplace=True)
 
     input_features = ['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']
     reg_features = ['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']
@@ -89,6 +75,8 @@ def go(ARGS):
     class_model = RandomForestClassifier(**class_model_config)
 
     LOGGER.info("Fitting")
+    print(reg_X_train)
+    print(reg_y_train)
     reg_model.fit(reg_X_train, reg_y_train)
     class_model.fit(class_X_train, class_y_train)
 
@@ -110,22 +98,19 @@ def go(ARGS):
     LOGGER.info("Total Score: %s", (class_r_squared+reg_r_squared)/2)
     LOGGER.info("Total MAE: %s", (class_mae+reg_mae)/2)
 
-    LOGGER.info("Exporting model")
-    if os.path.exists(reg_model_path):
-        shutil.rmtree(reg_model_path)
-
-    if os.path.exists(class_model_path):
-        shutil.rmtree(class_model_path)
-
-    mlflow.sklearn.save_model(reg_model, reg_model_path)
-    mlflow.sklearn.save_model(class_model, class_model_path)
-
     LOGGER.info("Exporting the model artifacts")
-    for n, name, meta, r2, mae in zip(['reg', 'class'],
+    for n, name, model, meta, r2, mae, temp_path in zip(['reg', 'class'],
                                      ['Regression','Classification'],
+                                     [reg_model,class_model],
                                      [reg_model_config, class_model_config],
                                      [reg_r_squared,class_r_squared],
-                                     [reg_mae,class_mae]):
+                                     [reg_mae,class_mae],
+                                     [os.path.join(tempfile.gettempdir(), 'reg_model_dir'),
+                                      os.path.join(tempfile.gettempdir(), "class_model_dir")]):
+        if os.path.exists(temp_path):
+            shutil.rmtree(temp_path)
+        mlflow.sklearn.save_model(model, temp_path)
+
         artifact = wandb.Artifact(
             f'{n}_model',
             type='model_export',
@@ -134,7 +119,7 @@ def go(ARGS):
         )
         
         if not os.getenv('TESTING'):
-            artifact.add_dir(f"{n}_model_dir")
+            artifact.add_dir(temp_path)
             run.log_artifact(artifact)
             artifact.wait()
             # Saving r_squared as a summary

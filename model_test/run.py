@@ -4,11 +4,9 @@ If it performs better than previous models, it is promoted to a production.
 """
 # pylint: disable=E0401, W0621, C0103, E1101, R0914, R0915
 import os
-import csv
 import shutil
 import logging
 from datetime import datetime
-import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
 import wandb
@@ -19,7 +17,7 @@ from sklearn.metrics import mean_absolute_error
 
 # Set up logging
 logging.basicConfig(
-    filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
+    filename=f"../{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
 LOGGER = logging.getLogger()
 
@@ -30,35 +28,22 @@ def go(ARGS):
     """
     LOGGER.info("6 - Running model testing step")
 
-    LOGGER.info("Setting up file locations according to the environment")
-    if not os.getenv('TESTING'):
-        performance_report_path = '../reports/model_performance.csv'
-        performance_report_save_path = '../reports/model_performance.csv'
-        prod_model_path = "../prod_model_dir"
-        performance_plot_path = "../reports/model_performance.png"
-    else:
-        performance_report_path = 'reports/model_performance.csv'
-        # Use a temporary directory for testing
-        if not os.path.exists('data'):
-            os.makedirs('data')
-        performance_report_save_path = os.path.join(tempfile.gettempdir(), 'model_performance.csv')
-        prod_model_path = os.path.join(tempfile.gettempdir(), "prod_model_dir")
-        performance_plot_path = os.path.join(tempfile.gettempdir(), "model_performance.png")
-
-    run = wandb.init(job_type="model_test")
+    run = wandb.init(project="weather-prediction",job_type="model_test")
     run.config.update(ARGS)
 
     LOGGER.info(
         "Downloading models- %s, %s and data- %s artifacts",
         ARGS.reg_model,
         ARGS.class_model,
-        ARGS.test_dataset
+        ARGS.test_dataset,
+        ARGS.performance_records
     )
     # Downloading model artifact
     reg_model_local_path = run.use_artifact(ARGS.reg_model).download()
     class_model_local_path = run.use_artifact(ARGS.class_model).download()
     # Downloading test dataset
     test_dataset_path = run.use_artifact(ARGS.test_dataset).file()
+    performance_records_path = run.use_artifact(ARGS.performance_records).file()
 
     df = pd.read_csv(test_dataset_path)
 
@@ -80,13 +65,17 @@ def go(ARGS):
     LOGGER.info("Scoring")
     reg_r_squared = reg_model.score(reg_X_test, reg_y_test)
     class_r_squared = class_model.score(class_X_test, class_y_test)
+    total_r_squared = (reg_r_squared + class_r_squared) / 2
     LOGGER.info("Regression Score: %s", reg_r_squared)
     LOGGER.info("Classification Score: %s", class_r_squared)
+    LOGGER.info("Total Score: %s", total_r_squared)
 
     reg_mae = mean_absolute_error(reg_y_test, reg_y_pred)
     class_mae = mean_absolute_error(class_y_test, class_y_pred)
+    total_mae = (reg_mae + class_mae) / 2
     LOGGER.info("Regression MAE: %s", reg_mae)
     LOGGER.info("Classification MAE: %s", class_mae)
+    LOGGER.info("Total MAE: %s", total_mae)
 
     LOGGER.info("Running data slice tests")
     slice_mae = {}
@@ -98,54 +87,76 @@ def go(ARGS):
 
     LOGGER.info("Testing data drift. Expecting results to be False")
     # Opening model performance log
-    perf = pd.read_csv(performance_report_path, index_col=0)
+    perf = pd.read_csv(performance_records_path, index_col=0)
 
     # Raw comparison test
-    raw_comp = reg_r_squared < np.min(perf['Score'])
+    raw_comp = total_r_squared < np.min(perf['Score'])
     LOGGER.info("Raw comparison: %s", raw_comp)
 
     # Parametric significance test
-    param_signific = reg_r_squared < np.mean(
+    param_signific = total_r_squared < np.mean(
         perf['Score']) - 2 * np.std(perf['Score'])
     LOGGER.info("Parametric significance: %s", param_signific)
 
     # Non-parametric outlier test
     iqr = np.quantile(perf['Score'], 0.75) - np.quantile(perf['Score'], 0.25)
-    nonparam = reg_r_squared < np.quantile(perf['Score'], 0.25) - iqr * 1.5
+    nonparam = total_r_squared < np.quantile(perf['Score'], 0.25) - iqr * 1.5
     LOGGER.info("Non-parametric outlier: %s", nonparam)
 
     LOGGER.info(
         "Saving the latest model performance metrics")
+
     date = datetime.now().strftime('%Y-%m-%d')
-    with open(performance_report_save_path, 'a', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow([date, reg_r_squared, reg_mae])
+    new = {'Date':date, 'Score':total_r_squared, 'MAE':total_mae}
+    new = pd.DataFrame([new])
+    new.set_index('Date', inplace=True)
+    perf = pd.concat([perf,new])
+    perf = perf.drop_duplicates()
+
+    print(perf)
 
     LOGGER.info(
         "Checking if the new model is perfroming better than previous models")
     # If the MAE score of the latest model is smaller (better performace) than
     # any other models MAE, then this model is promoted to production model
-    if reg_mae <= perf['MAE'].min() or raw_comp or param_signific or nonparam:
-        if os.path.exists(prod_model_path):
-            shutil.rmtree(prod_model_path)
-        LOGGER.info("Model performance is better than previous model. Promoting new model to production")
-        mlflow.sklearn.save_model(reg_model, prod_model_path)
+    if total_mae <= perf['MAE'].min() or raw_comp or param_signific or nonparam:
+        for n, name, model, temp_path in zip(['reg', 'class'],
+                                     ['Regression','Classification'],
+                                     [reg_model,class_model],
+                                     [os.path.join(tempfile.gettempdir(), 'reg_model_dir'),
+                                      os.path.join(tempfile.gettempdir(), "class_model_dir")]):
+            if os.path.exists(temp_path):
+                shutil.rmtree(temp_path)
+            mlflow.sklearn.save_model(model, temp_path)
+
+            artifact = wandb.Artifact(
+                f'{n}_model',
+                type='model_export',
+                description=f'Prodcution {name} model',
+            )
+            if not os.getenv('TESTING'):
+                artifact.add_dir(temp_path)
+                run.log_artifact(artifact, aliases=["prod"])
+                artifact.wait()
+            else:
+                pass
     else:
         pass
 
-    
-    LOGGER.info(
-        "Generating plot that displays the change in model performance over time")
-    performance = pd.read_csv(performance_report_path)
-    plt.plot(performance["Date"], performance["Score"], label="Score")
-    plt.plot(performance["Date"], performance["MAE"], label="MAE")
-    plt.legend()
-    plt.xlabel("Date")
-    plt.ylabel("Score/MAE")
-    plt.title("Change in ML Model Performance")
-
-    # Save the plot
-    plt.savefig(performance_plot_path)
+    with tempfile.NamedTemporaryFile("w") as file:
+        perf.to_csv(file.name, index=True)
+        LOGGER.info("Uploading performance records")
+        artifact = wandb.Artifact(
+            'model_performance.csv',
+            type='performance_records',
+            description='performance_records',
+        )
+        artifact.add_file(file.name)
+        run.log_artifact(artifact)
+        if not os.getenv('TESTING'):
+            artifact.wait()
+        else:
+            pass
 
     # Logging MAE and r2
     run.summary['reg_r2'] = reg_r_squared
@@ -187,6 +198,8 @@ if __name__ == "__main__":
         help="Test dataset",
         required=True
     )
+
+    PARSER.add_argument("--performance_records", type=str, help="Input artifact to split")
 
     ARGS = PARSER.parse_args()
 

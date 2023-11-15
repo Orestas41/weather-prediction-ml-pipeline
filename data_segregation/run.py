@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 
 # Setting up logging
 logging.basicConfig(
-    filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
+    filename=f"../{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
 LOGGER = logging.getLogger()
 
@@ -28,17 +28,6 @@ def go(ARGS):
 
     LOGGER.info("4 - Running data segregation step")
 
-    LOGGER.info("Setting up file locations according to the environment")
-    if not os.getenv('TESTING'):
-        trainval_path = '../data/trainval.csv'
-        test_path = '../data/test.csv'
-    else:
-        # Use a temporary directory for testing
-        if not os.path.exists('data'):
-            os.makedirs('data')
-        trainval_path = os.path.join(tempfile.gettempdir(), 'trainval.csv')
-        test_path = os.path.join(tempfile.gettempdir(), 'test.csv')
-
     LOGGER.info("Fetching artifact %s", ARGS.input)
     artifact_local_path = run.use_artifact(ARGS.input).file()
 
@@ -49,9 +38,6 @@ def go(ARGS):
         data_frame,
         test_size=ARGS.test_size,
     )
-
-    trainval.to_csv(trainval_path, index=False)
-    test.to_csv(test_path, index=False)
 
     for data_frame, k in zip([trainval, test], ['trainval', 'test']):
         LOGGER.info("Uploading %s_data.csv dataset", k)

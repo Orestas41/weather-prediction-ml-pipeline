@@ -16,4 +16,8 @@ entry_points:
         description: Full training dataset with the latest data
         type: string
 
-    command: "python run.py --reg_model {reg_model} --class_model {class_model} --full_dataset {full_dataset}"
+      batch_prediction:
+        description: description
+        type: string
+
+    command: "python run.py --reg_model {reg_model} --class_model {class_model} --full_dataset {full_dataset} --batch_prediction {batch_prediction}"

@@ -4,6 +4,14 @@ conda_env: conda.yml
 entry_points:
   main:
     parameters:
+      raw_data:
+        description: description
+        type: string
+
+      training_data:
+        description: description
+        type: string  
+
       output_artifact:
         description: Name of the output artifact
         type: string
@@ -19,4 +27,4 @@ entry_points:
         default: New data merged with previous training data
 
     command: >-
-      python run.py  --output_artifact {output_artifact}  --output_type {output_type} --output_description {output_description}
+      python run.py --raw_data {raw_data} --training_data {training_data} --output_artifact {output_artifact}  --output_type {output_type} --output_description {output_description}

@@ -46,6 +46,7 @@ def go(config: DictConfig):
                     "data_ingestion"),
                 "main",
                 parameters={
+                    "ingestion_records": "ingestion_records.csv:latest",
                     "step_description": "This step pull the latest weather data from API",
                     "hostname": config["data_ingestion"]["hostname"]
                     },
@@ -59,6 +60,8 @@ def go(config: DictConfig):
                     "pre-processing"),
                 "main",
                 parameters={
+                    'raw_data':'raw_data.csv:latest',
+                    'training_data':'training_data.csv:latest',
                     "output_artifact": "training_data.csv",
                     "output_type": "training_data",
                     "output_description": "New data merged with previous training data"
@@ -121,7 +124,8 @@ def go(config: DictConfig):
                 parameters={
                     "reg_model": "reg_model:latest",
                     "class_model": "class_model:latest",
-                    "test_dataset": "test_data.csv:latest"},
+                    "test_dataset": "test_data.csv:latest",
+                    "performance_records": "model_performance.csv:latest"},
             )
 
         if "batch_prediction" in active_steps:
@@ -133,7 +137,8 @@ def go(config: DictConfig):
                 parameters={
                     "reg_model": "reg_model:prod",
                     "class_model": "class_model:prod",
-                    "full_dataset": "training_data.csv:latest"
+                    "full_dataset": "training_data.csv:latest",
+                    "batch_prediction": "batch_prediction.csv:latest"
                 },
             )
 

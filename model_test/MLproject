@@ -4,6 +4,10 @@ conda_env: conda.yml
 entry_points:
   main:
     parameters:
+      performance_records:
+        description: description
+        type: string
+
       reg_model:
         description: An MLflow serialized model
         type: string
@@ -16,4 +20,4 @@ entry_points:
         description: The test artifact
         type: string
 
-    command: "python run.py  --reg_model {reg_model} --class_model {class_model} --test_dataset {test_dataset}"
+    command: "python run.py  --reg_model {reg_model} --class_model {class_model} --test_dataset {test_dataset} --performance_records {performance_records}"

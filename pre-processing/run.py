@@ -12,7 +12,7 @@ import tempfile
 
 # Set up logging
 logging.basicConfig(
-    filename=f"../reports/logs/{datetime.now().strftime('%Y-%m-%d')}.log",
+    filename=f"../{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
 LOGGER = logging.getLogger()
 
@@ -121,18 +121,9 @@ def go(ARGS):
 
     LOGGER.info("2 - Running pre-processing step")    
 
-    LOGGER.info("Setting up file locations according to the environment")
-    if not os.getenv('TESTING'):
-        raw_data_path = '../data/raw_data.csv'
-        training_data_path = '../data/training_data.csv'
-        training_data_save_path = '../data/training_data.csv'
-    else:
-        raw_data_path = 'data/raw_data.csv'
-        training_data_path = 'data/training_data.csv'
-        # Use a temporary directory for testing
-        if not os.path.exists('data'):
-            os.makedirs('data')
-        training_data_save_path = os.path.join(tempfile.gettempdir(), 'training_data.csv')
+    LOGGER.info("Fetching %s artifact", ARGS.raw_data)
+    raw_data_path = run.use_artifact(ARGS.raw_data).file()
+    training_data_path = run.use_artifact(ARGS.training_data).file()
 
     LOGGER.info("Opening raw data file")
     data = pd.read_csv(raw_data_path)
@@ -159,17 +150,16 @@ def go(ARGS):
     LOGGER.info("Removing duplicate rows")
     data = drop_duplicates(data)
 
-    # Save merged datasets as one file
-    data.to_csv(training_data_save_path)
-
     LOGGER.info("Uploading training_data.csv file to W&B")
-    artifact = wandb.Artifact(
-        ARGS.output_artifact,
-        type=ARGS.output_type,
-        description=ARGS.output_description,
-    )
-    artifact.add_file(training_data_path)
-    run.log_artifact(artifact)
+    with tempfile.NamedTemporaryFile("w") as file:
+        data.to_csv(file.name, index=True)
+        artifact = wandb.Artifact(
+            ARGS.output_artifact,
+            type=ARGS.output_type,
+            description=ARGS.output_description,
+        )
+        artifact.add_file(file.name)
+        run.log_artifact(artifact)
 
     LOGGER.info("Successfully pre-processed the data")
 
@@ -178,6 +168,10 @@ if __name__ == "__main__":
 
     PARSER = argparse.ArgumentParser(
         description="This step merges and cleans the data")
+    
+    PARSER.add_argument("--raw_data", type=str, help="Input artifact to split")
+
+    PARSER.add_argument("--training_data", type=str, help="Input artifact to split")
 
     PARSER.add_argument(
         "--output_artifact",
