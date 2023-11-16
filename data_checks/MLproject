@@ -4,7 +4,6 @@ conda_env: conda.yml
 entry_points:
   main:
     parameters:
-
       csv:
         description: Input CSV file to be tested
         type: string

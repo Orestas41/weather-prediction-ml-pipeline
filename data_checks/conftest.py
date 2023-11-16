@@ -17,8 +17,10 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope='session')
 def data(request):
-    """Read the data from a CSV file."""
-    run = wandb.init(job_type="data_tests", resume=True)
+    """
+    Read the data from a CSV file.
+    """
+    run = wandb.init(job_type="data_check", resume=True)
     data_path = run.use_artifact(request.config.option.csv).file()
     if data_path is None:
         pytest.fail("You must provide the --csv option on the command line")
@@ -29,9 +31,9 @@ def data(request):
 @pytest.fixture(scope='session')
 def ref_data(request):
     """
-    #Read the reference data from a CSV file.
+    Read the reference data from a CSV file.
     """
-    run = wandb.init(job_type="data_tests", resume=True)
+    run = wandb.init(job_type="data_check", resume=True)
     data_path = run.use_artifact(request.config.option.ref).file()
     if data_path is None:
         pytest.fail("You must provide the --ref option on the command line")
@@ -42,7 +44,7 @@ def ref_data(request):
 @pytest.fixture(scope='session')
 def threshold(request):
     """
-    #Get the KL threshold from the command line.
+    Get the KL threshold from the command line.
     """
     kl_threshold = request.config.option.kl_threshold
     if kl_threshold is None:

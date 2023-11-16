@@ -5,19 +5,19 @@ entry_points:
   main:
     parameters:
       performance_records:
-        description: description
+        description: Record of the previous model performances
         type: string
 
       reg_model:
-        description: An MLflow serialized model
+        description: An MLflow serialized Regression model for predicting temperature and precipitation
         type: string
 
       class_model:
-        description: An MLflow serialized model
+        description: An MLflow serialized Classification model for predicting weathercodes
         type: string
 
       test_dataset:
-        description: The test artifact
+        description: The test dataset
         type: string
 
     command: "python run.py  --reg_model {reg_model} --class_model {class_model} --test_dataset {test_dataset} --performance_records {performance_records}"

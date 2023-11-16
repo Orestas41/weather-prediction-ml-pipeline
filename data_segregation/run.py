@@ -1,5 +1,5 @@
 """
-This script splits the provided dataframe into a test set and a remainder set
+This script splits the provided dataframe into a test set and a training+validation set
 """
 # pylint: disable=E0401, W0621, C0103, E1101
 import tempfile
@@ -19,18 +19,17 @@ LOGGER = logging.getLogger()
 
 def go(ARGS):
     """
-    Splits the provided dataframe into test and remainder sets
+    Splits the provided dataframe into test and training+validation sets
     """
+    LOGGER.info("3 - Running data segregation step")
 
-    run = wandb.init(project="weather-prediction",
-                        job_type="data_segregation")
+    run = wandb.init(job_type="data_segregation")
     run.config.update(ARGS)
-
-    LOGGER.info("4 - Running data segregation step")
 
     LOGGER.info("Fetching artifact %s", ARGS.input)
     artifact_local_path = run.use_artifact(ARGS.input).file()
 
+    # Opening training data
     data_frame = pd.read_csv(artifact_local_path)
 
     LOGGER.info("Splitting data into trainval and test")
@@ -42,7 +41,7 @@ def go(ARGS):
     for data_frame, k in zip([trainval, test], ['trainval', 'test']):
         LOGGER.info("Uploading %s_data.csv dataset", k)
         with tempfile.NamedTemporaryFile("w") as file:
-            data_frame.to_csv(file.name, index=False)
+            data_frame.to_csv(file.name, index=False) # Saving as a temporary fle
             artifact = wandb.Artifact(
                 f"{k}_data.csv",
                 type=f"{k}_data",
@@ -55,18 +54,23 @@ def go(ARGS):
             else:
                 pass
 
-    LOGGER.info("Finished data segregation")
+    LOGGER.info("Data segregation finished")
 
 
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser(description="Split test and remainder")
 
-    PARSER.add_argument("input", type=str, help="Input artifact to split")
+    PARSER.add_argument(
+        "input",
+        type=str,
+        help="Input artifact to split"
+    )
 
     PARSER.add_argument(
         "test_size",
         type=float,
-        help="Size of the test split. Fraction of the dataset, or number of items")
+        help="Size of the test split. Fraction of the dataset, or number of items"
+    )
 
     ARGS = PARSER.parse_args()
 

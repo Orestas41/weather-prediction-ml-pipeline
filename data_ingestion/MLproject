@@ -5,7 +5,7 @@ entry_points:
   main:
     parameters:
       ingestion_records:
-        description: description
+        description: Records of previously ingested data range
         type: string
 
       step_description:

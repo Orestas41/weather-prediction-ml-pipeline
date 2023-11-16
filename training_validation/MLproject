@@ -5,27 +5,27 @@ entry_points:
   main:
     parameters:
       trainval_artifact:
-        description: Train dataset
+        description: Training and validation dataset
         type: string
 
       val_size:
         description: Size of the validation split. Fraction of the dataset, or number of items
         type: string
 
-      reg_model_config:
+      reg_config:
         description:
-          Linear Regression configuration. A path to a JSON file with the configuration that will
-          be passed to the scikit-learn constructor for Linear Regression.
+          XGBRegressor configuration. A path to a JSON file with the configuration that will
+          be passed to the scikit-learn constructor for XGBRegressor.
         type: string
 
-      class_model_config:
+      class_config:
         description:
-          Linear Regression configuration. A path to a JSON file with the configuration that will
-          be passed to the scikit-learn constructor for Linear Regression.
+          Random Forest Classifier configuration. A path to a JSON file with the configuration that will
+          be passed to the scikit-learn constructor for Random Forest Classifier.
         type: string
 
     command: >-
       python run.py --trainval_artifact {trainval_artifact} \
                     --val_size {val_size} \
-                    --reg_model_config {reg_model_config} \
-                    --class_model_config {class_model_config}
+                    --reg_config {reg_config} \
+                    --class_config {class_config}

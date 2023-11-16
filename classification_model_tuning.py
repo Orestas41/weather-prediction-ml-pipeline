@@ -1,3 +1,7 @@
+"""
+This script run W&B sweep agent that retrains classification model with parameters
+in search for best performing configuration. This script is not in the pipeline
+"""
 import wandb
 import os
 import pandas as pd
@@ -8,25 +12,34 @@ from sklearn.metrics import mean_squared_error
 import numpy as np
 
 def train_model():
-
+    """
+    Runs W&B sweep to find best model configuration
+    """
+    # Setting W&B project and group
     os.environ["WANDB_PROJECT"] = "weather-prediction"
     os.environ["WANDB_RUN_GROUP"] = 'classification model tuning'
 
+    # Initiating W&B run
+    run = wandb.init(config=sweep_config)
+
+    # Opening training data
     df = pd.read_csv('data/training_data.csv')
 
+    # Setting time column as index
+    df.set_index('time', inplace=True)
+
+    # Setting input and target features
     X = df.drop(['weathercode'], axis=1)
     y = df[['weathercode']]
 
+    # Splitting data into training and validation sets
     X_train, X_val, y_train, y_val = train_test_split(
         X, y, test_size=0.3)
-
-    X_train.set_index('time', inplace=True)
-    X_val.set_index('time', inplace=True)   
-
-    run = wandb.init(config=sweep_config)
-
+  
+    # Setting up the configuration
     config = run.config
 
+    # Specifying parameters
     params = {
         'n_estimators': config.n_estimators,
         'max_depth': config.max_depth,
@@ -37,20 +50,27 @@ def train_model():
         "bootstrap": config.bootstrap
     }
 
+    # Preparing the classification model
     model = RandomForestClassifier(**params)
 
+    # Fitting
     model.fit(X_train, y_train)
     
+    # Predicting
     y_pred = model.predict(X_val)
 
+    # Scoring
     r_squared = model.score(X_val, y_val)
     mae = mean_absolute_error(y_val, y_pred)
     rmse = np.sqrt(mean_squared_error(y_val,y_pred))
 
+    # Logging scores to W&B
     wandb.log({'r_squared':r_squared})
     wandb.log({'mae':mae})
     wandb.log({'rmse':rmse})
 
+
+# Setting up parameter limits
 sweep_config = {
     'method':'random',
     'metric': {
@@ -81,7 +101,9 @@ sweep_config = {
         'bootstrap':{
             'values':[True, False]
         }}}
-    
+
+# Setting up W&B sweeps
 sweep_id = wandb.sweep(sweep_config,project="weather-prediction")
 
+# Initiating W&B agent
 wandb.agent(sweep_id, function=train_model)

@@ -5,11 +5,11 @@ entry_points:
   main:
     parameters:
       reg_model:
-        description: An MLflow serialized model
+        description: An MLflow serialized Regression model for predicting temperature and precipitation
         type: string
 
       class_model:
-        description: An MLflow serialized model
+        description: An MLflow serialized Classification model for predicting weathercodes
         type: string
 
       full_dataset:
@@ -17,7 +17,7 @@ entry_points:
         type: string
 
       batch_prediction:
-        description: description
+        description: Weather prediction produced on the last run
         type: string
 
     command: "python run.py --reg_model {reg_model} --class_model {class_model} --full_dataset {full_dataset} --batch_prediction {batch_prediction}"

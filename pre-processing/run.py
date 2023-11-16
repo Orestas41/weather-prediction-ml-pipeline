@@ -7,7 +7,6 @@ import logging
 import wandb
 import argparse
 import pandas as pd
-import os
 import tempfile
 
 # Set up logging
@@ -21,8 +20,7 @@ def convert_date_column(data):
     Convert a date column in a DataFrame to a datetime object.
 
     ARGS:
-        data_frame: The DataFrame.
-        format: The format of the date column.
+        data: The DataFrame
 
     Returns:
         The DataFrame with the date column converted to a datetime object.
@@ -33,78 +31,76 @@ def convert_date_column(data):
 
 def create_month_day_column(data):
     """
-    Convert a date column in a DataFrame to a datetime object.
+    Create a new column of month and day in month.day format
 
     ARGS:
-        data_frame: The DataFrame.
-        format: The format of the date column.
+        data_frame: The DataFrame
 
     Returns:
-        The DataFrame with the date column converted to a datetime object.
+        The DataFrame with the month-day column added
     """
     data['month-day'] = data['time'].dt.strftime('%m.%d').astype(float)
     return data
 
 def set_date_index(data):
     """
-    Convert a date column in a DataFrame to a datetime object.
+    Set the date column as the index of the DataFrame
 
     ARGS:
-        data_frame: The DataFrame.
-        format: The format of the date column.
+        data_frame: The DataFrame
 
     Returns:
-        The DataFrame with the date column converted to a datetime object.
+        The DataFrame with the date column set as the index
     """
     data.set_index('time', inplace=True)
     return data
 
 def merge_datasets(data, training_data):
     """
-    Merges two DataFrames.
+    Merges two DataFrames
 
     ARGS:
-        data_frame_1: The first DataFrame.
-        data_frame_2: The second DataFrame.
+        data_frame_1: The first DataFrame
+        data_frame_2: The second DataFrame
 
     Returns:
-        The merged DataFrame.
+        The merged DataFrame
     """
     return pd.concat([training_data, data], axis=0)
 
 def remove_na(data):
     """
-    Removes rows with missing values from a DataFrame.
+    Removes rows with missing values from a DataFrame
 
     ARGS:
-        data_frame: The DataFrame.
+        data_frame: The DataFrame
 
     Returns:
-        The DataFrame with missing values removed.
+        The DataFrame with missing values removed
     """
     return data.dropna()
 
 def drop_duplicates(data):
     """
-    Drops duplicate rows from a DataFrame.
+    Drops duplicate rows from a DataFrame
 
     ARGS:
-        data_frame: The DataFrame.
+        data_frame: The DataFrame
 
     Returns:
-        The DataFrame with duplicate rows dropped.
+        The DataFrame with duplicate rows dropped
     """
     return data.drop_duplicates()
 
 def sort_by_date(data):
     """
-    Drops duplicate rows from a DataFrame.
+    Drops duplicate rows from a DataFrame
 
     ARGS:
-        data_frame: The DataFrame.
+        data_frame: The DataFrame
 
     Returns:
-        The DataFrame with duplicate rows dropped.
+        The DataFrame with duplicate rows dropped
     """
     data.index = pd.to_datetime(data.index)
     return data.sort_index()
@@ -113,15 +109,14 @@ def go(ARGS):
     """
     Combines all data processing functions and completes data pre-processing
     """
+    LOGGER.info("2 - Running pre-processing step")
 
     # Creating instance
     run = wandb.init(
         job_type="pre-processing")
-    run.config.update(ARGS)
+    run.config.update(ARGS)    
 
-    LOGGER.info("2 - Running pre-processing step")    
-
-    LOGGER.info("Fetching %s artifact", ARGS.raw_data)
+    LOGGER.info("Fetching %s and %s", ARGS.raw_data, ARGS.training_data)
     raw_data_path = run.use_artifact(ARGS.raw_data).file()
     training_data_path = run.use_artifact(ARGS.training_data).file()
 
@@ -152,7 +147,7 @@ def go(ARGS):
 
     LOGGER.info("Uploading training_data.csv file to W&B")
     with tempfile.NamedTemporaryFile("w") as file:
-        data.to_csv(file.name, index=True)
+        data.to_csv(file.name, index=True) # Saving as a temporary file
         artifact = wandb.Artifact(
             ARGS.output_artifact,
             type=ARGS.output_type,
@@ -161,7 +156,7 @@ def go(ARGS):
         artifact.add_file(file.name)
         run.log_artifact(artifact)
 
-    LOGGER.info("Successfully pre-processed the data")
+    LOGGER.info("Pre-processing finished")
 
 
 if __name__ == "__main__":
@@ -169,9 +164,17 @@ if __name__ == "__main__":
     PARSER = argparse.ArgumentParser(
         description="This step merges and cleans the data")
     
-    PARSER.add_argument("--raw_data", type=str, help="Input artifact to split")
+    PARSER.add_argument(
+        "--raw_data", 
+        type=str, 
+        help="Input the latest weather data"
+    )
 
-    PARSER.add_argument("--training_data", type=str, help="Input artifact to split")
+    PARSER.add_argument(
+        "--training_data",
+        type=str,
+        help="Input all collected training data"
+    )
 
     PARSER.add_argument(
         "--output_artifact",

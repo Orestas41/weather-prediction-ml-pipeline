@@ -5,11 +5,11 @@ entry_points:
   main:
     parameters:
       raw_data:
-        description: description
+        description: Latest weather data pulled from the API
         type: string
 
       training_data:
-        description: description
+        description: All weather data from the last 15 years
         type: string  
 
       output_artifact:

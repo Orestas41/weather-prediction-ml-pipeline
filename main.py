@@ -22,7 +22,7 @@ _steps = [
 
 
 # Reading the configuration
-@hydra.main(config_name='config')
+@hydra.main(config_name='config.yaml', version_base='1.1')
 def go(config: DictConfig):
     """
     Run the pipeline for machine learning tasks
@@ -40,6 +40,7 @@ def go(config: DictConfig):
     with tempfile.TemporaryDirectory():
 
         if "data_ingestion" in active_steps:
+            
             _ = mlflow.run(
                 os.path.join(
                     hydra.utils.get_original_cwd(),
@@ -94,14 +95,14 @@ def go(config: DictConfig):
 
         if "training_validation" in active_steps:
 
-            reg_model_config = os.path.abspath("config.yaml")
-            with open(reg_model_config, "w+") as file:
+            reg_config = os.path.abspath("reg_config.yaml")
+            with open(reg_config, "w+") as reg_file:
                 json.dump(
-                    dict(config["modeling"]["XGBRegressor"].items()), file)
-            class_model_config = os.path.abspath("config.yaml")
-            with open(class_model_config, "w+") as file:
+                    dict(config["modeling"]["XGBRegressor"].items()), reg_file)
+            class_config = os.path.abspath("class_config.yaml")
+            with open(class_config, "w+") as class_file:
                 json.dump(
-                    dict(config["modeling"]["RandomForestClassifier"].items()), file)
+                    dict(config["modeling"]["RandomForestClassifier"].items()), class_file)
             _ = mlflow.run(
                 os.path.join(
                     hydra.utils.get_original_cwd(),
@@ -110,8 +111,8 @@ def go(config: DictConfig):
                 parameters={
                     "trainval_artifact": "trainval_data.csv:latest",
                     "val_size": config["modeling"]["val_size"],
-                    "reg_model_config": reg_model_config,
-                    "class_model_config": class_model_config},
+                    "reg_config": reg_config,
+                    "class_config": class_config},
             )
 
         if "model_test" in active_steps:

@@ -4,7 +4,6 @@ conda_env: conda.yml
 entry_points:
   main:
     parameters:
-
       steps:
         description: Comma-separated list of steps to execute (useful for debugging)
         type: str

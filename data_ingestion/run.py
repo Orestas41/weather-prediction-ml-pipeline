@@ -1,5 +1,5 @@
 """
-This script pulls the latest data from the api
+This script pulls the latest data from the API
 """
 # pylint: disable=E1101, E0401, C0103, W0621
 import logging
@@ -23,33 +23,35 @@ LOGGER = logging.getLogger()
 
 def go(args):
     """
-    Pulls weather data for each city from API, merges and saves it in a CSV file
+    Pulls weather data for each city from API and saves it in a CSV file
     """
     LOGGER.info("1 - Running data ingestion step")
+
+    # Initiating wandb run
     run = wandb.init(job_type="data_ingestion")
     run.config.update(args)
 
-    LOGGER.info("Setting up file locations according to the environment")
+    LOGGER.info("Fetching %s artifact", args.ingestion_records)
+    ingestion_records_path = run.use_artifact(args.ingestion_records).file()
+
+    LOGGER.info("Setting up configurations file location based on the environment")
     if not os.getenv('TESTING'):
         config_path = '../config.yaml'
     else:
         config_path = 'config.yaml'
 
-    LOGGER.info("Fetching %s artifact", args.ingestion_records)
-    ingestion_records_path = run.use_artifact(args.ingestion_records).file()
-
-    # Opening configuration file
+    LOGGER.info("Opening configuration file")
     with open(config_path, 'r') as file:
             config = yaml.load(file, Loader=yaml.FullLoader)
 
-    # Setting up API request
+    LOGGER.info("Setting up API request")
     conn = http.client.HTTPSConnection(args.hostname)
     payload = ''
     headers = {}
 
     city = config['cities']
-    end = date - timedelta(days=7)
-    start = end - timedelta(days=7)
+    end = date - timedelta(days=7) # Setting end date 7 days prior to today
+    start = end - timedelta(days=7) # Setting start date 7 days prior to end date
     raw_data = pd.DataFrame()
 
     for i in city:
@@ -62,18 +64,18 @@ def go(args):
         data["city"] = config['cities'][i]['id']
         raw_data = pd.concat([raw_data, data])
 
-    LOGGER.info("Saving ingestion range record")
+    LOGGER.info("Saving ingestion range record (%s to %s)", start, end)
     ingestion_records = pd.read_csv(ingestion_records_path)
-    ingestion_records = ingestion_records.assign(Date= [date.strftime('%Y-%m-%d')])
-    ingestion_records = ingestion_records.assign(Start= [start.strftime('%Y-%m-%d')])
-    ingestion_records = ingestion_records.assign(End= [end.strftime('%Y-%m-%d')])
+    for column_name, column_data in zip(['Date','Start','End'],
+                                        [date, start, end]):
+        ingestion_records = ingestion_records.assign(column_name= [column_data.strftime('%Y-%m-%d')])
     
-    for file_name, k, desc in zip([raw_data,ingestion_records],
+    for file_name, k, desc in zip([raw_data, ingestion_records],
                                   ['raw_data.csv', 'ingestion_records.csv'],
                                   ['raw_data','ingestion_records']):
         LOGGER.info("Uploading %s", desc)
         with tempfile.NamedTemporaryFile("w") as file:
-            file_name.to_csv(file.name, index=False)
+            file_name.to_csv(file.name, index=False) # Saving as a temporary file
             artifact = wandb.Artifact(
                 k,
                 type=desc,
@@ -92,17 +94,27 @@ def go(args):
 if __name__ == "__main__":
 
     PARSER = argparse.ArgumentParser(
-        description="This step scrapes the latest data from the web")
+        description="This step pulls the latest data from the API")
     
-    PARSER.add_argument("--ingestion_records", type=str, help="Input artifact to split")
+    PARSER.add_argument(
+        "--ingestion_records",
+        type=str,
+        help="Input csv file with data ingestion range records",
+        required=True
+    )
 
-    PARSER.add_argument("--step_description", type=str,
-                        help="Description of the step")
+    PARSER.add_argument(
+        "--step_description",
+        type=str,
+        help="Description of the step"
+    )
     
-    PARSER.add_argument("--hostname", type=str,
+    PARSER.add_argument(
+        "--hostname",
+        type=str,
         help="HTTPS connection to the server with the hostname",
         required=True
-        )
+    )
 
     args = PARSER.parse_args()
 

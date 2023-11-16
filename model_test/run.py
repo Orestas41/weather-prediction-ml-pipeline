@@ -1,6 +1,6 @@
 """
 This step takes the latest model and tests it against the test dataset.
-If it performs better than previous models, it is promoted to a production.
+If it performs better than previous models, it is promoted as a production model.
 """
 # pylint: disable=E0401, W0621, C0103, E1101, R0914, R0915
 import os
@@ -24,29 +24,30 @@ LOGGER = logging.getLogger()
 
 def go(ARGS):
     """
-    Test model perfromance and promote to production if better than previous models
+    Test model performance and promote to production if better than previous models
     """
-    LOGGER.info("6 - Running model testing step")
+    LOGGER.info("5 - Running model testing step")
 
-    run = wandb.init(project="weather-prediction",job_type="model_test")
+    run = wandb.init(job_type="model_test")
     run.config.update(ARGS)
 
     LOGGER.info(
-        "Downloading models- %s, %s and data- %s artifacts",
-        ARGS.reg_model,
-        ARGS.class_model,
+        "Downloading %s and %s artifacts",
         ARGS.test_dataset,
         ARGS.performance_records
     )
-    # Downloading model artifact
-    reg_model_local_path = run.use_artifact(ARGS.reg_model).download()
-    class_model_local_path = run.use_artifact(ARGS.class_model).download()
     # Downloading test dataset
     test_dataset_path = run.use_artifact(ARGS.test_dataset).file()
     performance_records_path = run.use_artifact(ARGS.performance_records).file()
 
+    # Setting the file path of temporary stored models
+    reg_model_local_path = '../reg_model_dir'
+    class_model_local_path = '../class_model_dir'
+
+    LOGGER.info("Opening test dataset")
     df = pd.read_csv(test_dataset_path)
 
+    # Setting time column as index
     df.set_index('time', inplace=True)
 
     LOGGER.info("Setting feature and target columns")
@@ -56,13 +57,14 @@ def go(ARGS):
     class_X_test = df.drop(['weathercode'], axis=1)
     class_y_test = df[['weathercode']]
 
-    LOGGER.info("Loading model and performing inference on test set")
+    LOGGER.info("Loading the models and performing inference on the test sets")
     reg_model = mlflow.sklearn.load_model(reg_model_local_path)
     class_model = mlflow.sklearn.load_model(class_model_local_path)
+
     reg_y_pred = reg_model.predict(reg_X_test)
     class_y_pred = class_model.predict(class_X_test)
 
-    LOGGER.info("Scoring")
+    LOGGER.info("Scoring both models")
     reg_r_squared = reg_model.score(reg_X_test, reg_y_test)
     class_r_squared = class_model.score(class_X_test, class_y_test)
     total_r_squared = (reg_r_squared + class_r_squared) / 2
@@ -81,9 +83,8 @@ def go(ARGS):
     slice_mae = {}
     for val in reg_X_test['city'].unique():
         idx = reg_X_test['city'] == val
-        # Do the inference and Compute the metrics
         slice_mae[val] = mean_absolute_error(reg_y_test[idx], reg_y_pred[idx])
-        LOGGER.info("MAE of slices: %s", slice_mae[val])
+        LOGGER.info("MAE score of %s slice: %s", val, slice_mae[val])
 
     LOGGER.info("Testing data drift. Expecting results to be False")
     # Opening model performance log
@@ -105,43 +106,39 @@ def go(ARGS):
 
     LOGGER.info(
         "Saving the latest model performance metrics")
-
     date = datetime.now().strftime('%Y-%m-%d')
     new = {'Date':date, 'Score':total_r_squared, 'MAE':total_mae}
     new = pd.DataFrame([new])
     new.set_index('Date', inplace=True)
     perf = pd.concat([perf,new])
     perf = perf.drop_duplicates()
-
-    print(perf)
+    LOGGER.info("\n" + perf.to_string(index=True))
 
     LOGGER.info(
-        "Checking if the new model is perfroming better than previous models")
-    # If the MAE score of the latest model is smaller (better performace) than
-    # any other models MAE, then this model is promoted to production model
+        "Checking if the new model is performing better than previous models")
+    # If the MAE score of the latest model is smaller (better performance) than
+    # any other models MAE, then this model is promoted as a production model
     if total_mae <= perf['MAE'].min() or raw_comp or param_signific or nonparam:
-        for n, name, model, temp_path in zip(['reg', 'class'],
-                                     ['Regression','Classification'],
-                                     [reg_model,class_model],
-                                     [os.path.join(tempfile.gettempdir(), 'reg_model_dir'),
-                                      os.path.join(tempfile.gettempdir(), "class_model_dir")]):
-            if os.path.exists(temp_path):
-                shutil.rmtree(temp_path)
-            mlflow.sklearn.save_model(model, temp_path)
-
-            artifact = wandb.Artifact(
-                f'{n}_model',
-                type='model_export',
-                description=f'Prodcution {name} model',
-            )
-            if not os.getenv('TESTING'):
-                artifact.add_dir(temp_path)
-                run.log_artifact(artifact, aliases=["prod"])
-                artifact.wait()
-            else:
-                pass
+        alias = ['latest','prod']
+        LOGGER.info("Model has the best performance. Uploading as the production model")
     else:
-        pass
+        alias = ['latest']
+        LOGGER.info("Model did not perform better than production model. Uploading as the latest model")
+    
+    for n, name, path in zip(['reg', 'class'],
+                                ['Regression','Classification'],
+                                [reg_model_local_path,class_model_local_path]):
+        artifact = wandb.Artifact(
+            f'{n}_model',
+            type='model_export',
+            description=f'Prodcution {name} model',
+        )
+        if not os.getenv('TESTING'):
+            artifact.add_dir(path)
+            run.log_artifact(artifact, aliases=alias)
+            artifact.wait()
+        else:
+            pass
 
     with tempfile.NamedTemporaryFile("w") as file:
         perf.to_csv(file.name, index=True)
@@ -159,15 +156,15 @@ def go(ARGS):
             pass
 
     # Logging MAE and r2
-    run.summary['reg_r2'] = reg_r_squared
-    run.summary['reg_mae'] = reg_mae
-    run.summary['class_r2'] = class_r_squared
-    run.summary['class_mae'] = class_mae
-    run.summary["Raw comparison"] = raw_comp
-    run.summary["Parametric significance"] = param_signific
-    run.summary["Non-parametric outlier"] = nonparam
+    for name, metric in zip(['reg_mae','class_mae','total_mae','reg_r2','class_r2','total_r2','Raw comparison','Parametric significance','Non-parametric outlier'],
+                            [reg_mae, class_mae, total_mae, reg_r_squared, class_r_squared, total_r_squared, raw_comp, param_signific, nonparam]):
+        run.summary[name] = metric
 
-    LOGGER.info("Finished testing the model")
+    LOGGER.info("Model testing finished")
+
+    # Removing locally saved models
+    for path in ['../reg_model_dir','../class_model_dir']:
+        shutil.rmtree(path)
 
     # Finish the run
     run.finish()
@@ -181,25 +178,30 @@ if __name__ == "__main__":
     PARSER.add_argument(
         "--reg_model",
         type=str,
-        help="Input MLFlow model",
+        help="Input MLFlow Regression model",
         required=True
     )
 
     PARSER.add_argument(
         "--class_model",
         type=str,
-        help="Input MLFlow model",
+        help="Input MLFlow Classification model",
         required=True
     )
 
     PARSER.add_argument(
         "--test_dataset",
         type=str,
-        help="Test dataset",
+        help="Input test dataset",
         required=True
     )
 
-    PARSER.add_argument("--performance_records", type=str, help="Input artifact to split")
+    PARSER.add_argument(
+        "--performance_records",
+        type=str,
+        help="Input the csv file with records of previous model performances",
+        required=True
+    )
 
     ARGS = PARSER.parse_args()
 
