@@ -2,9 +2,9 @@
 This script defines shared fixtures and configuration options for test files
 """
 # pylint: disable=E1101, E0401
-import wandb
 import pytest
 import pandas as pd
+import wandb
 
 def pytest_addoption(parser):
     """

@@ -2,20 +2,21 @@
 This script splits the provided dataframe into a test set and a training+validation set
 """
 # pylint: disable=E0401, W0621, C0103, E1101
+import os
 import tempfile
 import logging
-import os
 from datetime import datetime
-import wandb
 import argparse
 import pandas as pd
 from sklearn.model_selection import train_test_split
+import wandb
 
 # Setting up logging
 logging.basicConfig(
     filename=f"../{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
 LOGGER = logging.getLogger()
+
 
 def go(ARGS):
     """
@@ -41,7 +42,8 @@ def go(ARGS):
     for data_frame, k in zip([trainval, test], ['trainval', 'test']):
         LOGGER.info("Uploading %s_data.csv dataset", k)
         with tempfile.NamedTemporaryFile("w") as file:
-            data_frame.to_csv(file.name, index=False) # Saving as a temporary fle
+            # Saving as a temporary fle
+            data_frame.to_csv(file.name, index=False)
             artifact = wandb.Artifact(
                 f"{k}_data.csv",
                 type=f"{k}_data",

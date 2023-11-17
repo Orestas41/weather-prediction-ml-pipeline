@@ -3,6 +3,6 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - pandas=2.1.1
+  - pandas=2.1.3
   - pyyaml=6.0.1
   - wandb==0.15.12

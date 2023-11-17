@@ -4,16 +4,17 @@ Merges all available data. Performs data cleaning and saves it in W&B
 # pylint: disable=E0401, W0621, C0103, R0914, R0915, E1101, C0200
 from datetime import datetime
 import logging
-import wandb
 import argparse
-import pandas as pd
 import tempfile
+import pandas as pd
+import wandb
 
 # Set up logging
 logging.basicConfig(
     filename=f"../{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
 LOGGER = logging.getLogger()
+
 
 def convert_date_column(data):
     """
@@ -29,6 +30,7 @@ def convert_date_column(data):
         data['time'], format='%Y-%m-%d')
     return data
 
+
 def create_month_day_column(data):
     """
     Create a new column of month and day in month.day format
@@ -41,6 +43,7 @@ def create_month_day_column(data):
     """
     data['month-day'] = data['time'].dt.strftime('%m.%d').astype(float)
     return data
+
 
 def set_date_index(data):
     """
@@ -55,7 +58,8 @@ def set_date_index(data):
     data.set_index('time', inplace=True)
     return data
 
-def merge_datasets(data, training_data):
+
+def merge_and_clean_datasets(data, training_data):
     """
     Merges two DataFrames
 
@@ -66,31 +70,9 @@ def merge_datasets(data, training_data):
     Returns:
         The merged DataFrame
     """
-    return pd.concat([training_data, data], axis=0)
+    merged_data = pd.concat([training_data, data], axis=0)
+    return merged_data.dropna().drop_duplicates()
 
-def remove_na(data):
-    """
-    Removes rows with missing values from a DataFrame
-
-    ARGS:
-        data_frame: The DataFrame
-
-    Returns:
-        The DataFrame with missing values removed
-    """
-    return data.dropna()
-
-def drop_duplicates(data):
-    """
-    Drops duplicate rows from a DataFrame
-
-    ARGS:
-        data_frame: The DataFrame
-
-    Returns:
-        The DataFrame with duplicate rows dropped
-    """
-    return data.drop_duplicates()
 
 def sort_by_date(data):
     """
@@ -105,6 +87,7 @@ def sort_by_date(data):
     data.index = pd.to_datetime(data.index)
     return data.sort_index()
 
+
 def go(ARGS):
     """
     Combines all data processing functions and completes data pre-processing
@@ -114,7 +97,7 @@ def go(ARGS):
     # Creating instance
     run = wandb.init(
         job_type="pre-processing")
-    run.config.update(ARGS)    
+    run.config.update(ARGS)
 
     LOGGER.info("Fetching %s and %s", ARGS.raw_data, ARGS.training_data)
     raw_data_path = run.use_artifact(ARGS.raw_data).file()
@@ -131,10 +114,7 @@ def go(ARGS):
 
     LOGGER.info("Merging new data with old training data")
     training_data = pd.read_csv(training_data_path)
-    data = merge_datasets(data, training_data)
-
-    LOGGER.info("Removing rows with missing values")
-    data = remove_na(data)
+    data = merge_and_clean_datasets(data, training_data)
 
     LOGGER.info("Setting date as index")
     data = set_date_index(data)
@@ -142,12 +122,9 @@ def go(ARGS):
     LOGGER.info("Sorting by date")
     data = sort_by_date(data)
 
-    LOGGER.info("Removing duplicate rows")
-    data = drop_duplicates(data)
-
     LOGGER.info("Uploading training_data.csv file to W&B")
     with tempfile.NamedTemporaryFile("w") as file:
-        data.to_csv(file.name, index=True) # Saving as a temporary file
+        data.to_csv(file.name, index=True)  # Saving as a temporary file
         artifact = wandb.Artifact(
             ARGS.output_artifact,
             type=ARGS.output_type,
@@ -163,10 +140,10 @@ if __name__ == "__main__":
 
     PARSER = argparse.ArgumentParser(
         description="This step merges and cleans the data")
-    
+
     PARSER.add_argument(
-        "--raw_data", 
-        type=str, 
+        "--raw_data",
+        type=str,
         help="Input the latest weather data"
     )
 

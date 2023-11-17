@@ -1,18 +1,18 @@
 """
 This script trains and validates the models
 """
-# pylint: disable=E0401, C0103, R0914, E1101, W0621
+# pylint: disable=E0401, C0103, R0914, E1101, W0621, W1514, C0412
 import logging
 import json
 from datetime import datetime
-import mlflow
-import wandb
 import argparse
+import mlflow
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 from xgboost import XGBRegressor
 from sklearn.ensemble import RandomForestClassifier
+import wandb
 
 # Set up logging
 logging.basicConfig(
@@ -52,8 +52,15 @@ def go(ARGS):
         df, df, test_size=ARGS.val_size)
 
     # Setting up features for regression model
-    input_features = ['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']
-    reg_features = ['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']
+    input_features = [
+        'weathercode',
+        'temperature_2m_max',
+        'temperature_2m_min',
+        'precipitation_sum']
+    reg_features = [
+        'temperature_2m_max',
+        'temperature_2m_min',
+        'precipitation_sum']
 
     LOGGER.info('Setting up data for regression model')
     reg_X_train = X_train.drop(input_features, axis=1)
@@ -92,11 +99,11 @@ def go(ARGS):
     LOGGER.info("Classification Score: %s", class_r_squared)
     LOGGER.info("Classification MAE: %s", class_mae)
 
-    LOGGER.info("Total Score: %s", (class_r_squared+reg_r_squared)/2)
-    LOGGER.info("Total MAE: %s", (class_mae+reg_mae)/2)
+    LOGGER.info("Total Score: %s", (class_r_squared + reg_r_squared) / 2)
+    LOGGER.info("Total MAE: %s", (class_mae + reg_mae) / 2)
 
     LOGGER.info("Saving models")
-    for path, model in zip(['../reg_model_dir','../class_model_dir'],
+    for path, model in zip(['../reg_model_dir', '../class_model_dir'],
                            [reg_model, class_model]):
         mlflow.sklearn.save_model(model, path)
 
@@ -105,7 +112,8 @@ def go(ARGS):
 
 if __name__ == "__main__":
 
-    PARSER = argparse.ArgumentParser(description="Training and validation models")
+    PARSER = argparse.ArgumentParser(
+        description="Training and validation models")
 
     PARSER.add_argument(
         "--trainval_artifact",

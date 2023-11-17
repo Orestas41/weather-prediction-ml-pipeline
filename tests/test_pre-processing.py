@@ -1,71 +1,100 @@
-import pytest
-from unittest.mock import patch, MagicMock
-from datetime import datetime
-import pandas as pd
+"""
+This test script tests functions from pre-processing step
+"""
+# pylint: disable=C0103, E0401, C0413, W0621
 import os
 import sys
+from unittest.mock import patch, MagicMock
+import pandas as pd
+import pytest
 
-sys.path.append("/home/orestas41/weather-prediction-ml-pipeline/pre-processing")
+# Add the path to the directory containing the script you want to test
+sys.path.append(
+    "/home/orestas41/weather-prediction-ml-pipeline/pre-processing")
 
-# Import the 'go' function from run.py
-from run import go, convert_date_column, create_month_day_column, set_date_index, merge_datasets, remove_na, drop_duplicates, sort_by_date
+# Import the functions to be tested
+from run import (go, convert_date_column,
+                 create_month_day_column, set_date_index,
+                 merge_and_clean_datasets, sort_by_date)
 
 
-# Test the convert_date_column function
 def test_convert_date_column():
-    data = pd.DataFrame({'time': ['2023-01-01', '2023-01-02'], 'value': [1, 2]})
+    """Test the convert_date_column function"""
+    data = pd.DataFrame(
+        {'time': ['2023-01-01', '2023-01-02'], 'value': [1, 2]})
     result = convert_date_column(data)
     assert 'time' in result.columns
     assert isinstance(result['time'][0], pd.Timestamp)
 
-# Test the create_month_day_column function
+
 def test_create_month_day_column():
-    data = pd.DataFrame({'time': ['2023-01-01', '2023-01-02'], 'value': [1, 2]})
+    """Test the create_month_day_column function"""
+    data = pd.DataFrame(
+        {'time': ['2023-01-01', '2023-01-02'], 'value': [1, 2]})
     data = convert_date_column(data)
     result = create_month_day_column(data)
     assert 'month-day' in result.columns
     assert result['month-day'].dtype == float
 
-# Test the set_date_index function
+
 def test_set_date_index():
-    data = pd.DataFrame({'time': ['2023-01-01', '2023-01-02'], 'value': [1, 2]})
+    """Test the set_date_index function"""
+    data = pd.DataFrame(
+        {'time': ['2023-01-01', '2023-01-02'], 'value': [1, 2]})
     result = set_date_index(data)
     assert result.index.name == 'time'
 
-# Test the merge_datasets function
-def test_merge_datasets():
-    data1 = pd.DataFrame({'time': ['2023-01-01'], 'value': [1]})
-    data2 = pd.DataFrame({'time': ['2023-01-02'], 'value': [2]})
-    result = merge_datasets(data1, data2)
+
+def test_merge_and_clean_datasets():
+    """Test the merge_and_clean_datasets function"""
+    data1 = pd.DataFrame(
+        {'time': ['2023-01-01', '2023-01-02'], 'value': [1, 2]})
+    data2 = pd.DataFrame(
+        {'time': ['2023-01-01', '2023-01-02'], 'value': [None, 2]})
+    result = merge_and_clean_datasets(data1, data2)
     assert len(result) == 2
 
-# Test the remove_na function
-def test_remove_na():
-    data = pd.DataFrame({'time': ['2023-01-01', '2023-01-02'], 'value': [1, None]})
-    result = remove_na(data)
-    assert len(result) == 1
 
-# Test the drop_duplicates function
-def test_drop_duplicates():
-    data = pd.DataFrame({'time': ['2023-01-01', '2023-01-01'], 'value': [1, 1]})
-    result = drop_duplicates(data)
-    assert len(result) == 1
-
-# Test the sort_by_date function
 def test_sort_by_date():
-    data = pd.DataFrame({'time': ['2023-01-02', '2023-01-01'], 'value': [2, 1]})
+    """Test the sort_by_date function"""
+    data = pd.DataFrame(
+        {'time': ['2023-01-02', '2023-01-01'], 'value': [2, 1]})
     data = convert_date_column(data)
     data = set_date_index(data)
     result = sort_by_date(data)
     assert result.index[0] == pd.Timestamp('2023-01-01')
 
+
+@pytest.fixture
+def mock_wandb():
+    """Mock wandb connection"""
+    with patch('run.wandb.init') as mock_wandb_init:
+        yield mock_wandb_init
+
 # Test the go function
-def test_go():
+
+
+def test_go(mock_wandb):
+    """Test go function"""
+    # Setting up test environment
     os.environ['TESTING'] = '1'
+
+    # Setting up arguments
     args = MagicMock()
-    args.output_artifact = "output.csv"
+    args.raw_data = "tests/mock_data.csv"
+    args.training_data = "tests/mock_data.csv"
+    args.output_artifact = 'example.csv'
     args.output_type = "type"
     args.output_description = "description"
 
-    with patch('run.wandb.init'):
-        go(args)
+    # Mock wandb run
+    mock_run = MagicMock()
+    mock_wandb.return_value = mock_run
+
+    # Mock test data
+    mock_artifact = MagicMock()
+    mock_artifact.file.return_value = 'tests/mock_data.csv'
+    mock_run.use_artifact.return_value = mock_artifact
+
+    # Run the function
+    go(args)

@@ -2,7 +2,7 @@
 This script represents a pipeline for machine learning tasks,
 where each step can be executed independently based on the provided configuration
 """
-# pylint: disable=E0401, C0103, E1120
+# pylint: disable=E0401, C0103, E1120, W1514
 import json
 import tempfile
 import os
@@ -40,7 +40,7 @@ def go(config: DictConfig):
     with tempfile.TemporaryDirectory():
 
         if "data_ingestion" in active_steps:
-            
+
             _ = mlflow.run(
                 os.path.join(
                     hydra.utils.get_original_cwd(),
@@ -49,9 +49,7 @@ def go(config: DictConfig):
                 parameters={
                     "ingestion_records": "ingestion_records.csv:latest",
                     "step_description": "This step pull the latest weather data from API",
-                    "hostname": config["data_ingestion"]["hostname"]
-                    },
-                    
+                    "hostname": config["data_ingestion"]["hostname"]},
             )
 
         if "pre-processing" in active_steps:
@@ -61,12 +59,11 @@ def go(config: DictConfig):
                     "pre-processing"),
                 "main",
                 parameters={
-                    'raw_data':'raw_data.csv:latest',
-                    'training_data':'training_data.csv:latest',
+                    'raw_data': 'raw_data.csv:latest',
+                    'training_data': 'training_data.csv:latest',
                     "output_artifact": "training_data.csv",
                     "output_type": "training_data",
-                    "output_description": "New data merged with previous training data"
-                },
+                    "output_description": "New data merged with previous training data"},
             )
 
         if "data_checks" in active_steps:
@@ -79,7 +76,7 @@ def go(config: DictConfig):
                     "csv": "training_data.csv:latest",
                     "ref": "training_data.csv:reference",
                     "kl_threshold": config["data_check"]["kl_threshold"]
-                    }
+                }
             )
 
         if "data_segregation" in active_steps:
@@ -102,7 +99,9 @@ def go(config: DictConfig):
             class_config = os.path.abspath("class_config.yaml")
             with open(class_config, "w+") as class_file:
                 json.dump(
-                    dict(config["modeling"]["RandomForestClassifier"].items()), class_file)
+                    dict(
+                        config["modeling"]["RandomForestClassifier"].items()),
+                    class_file)
             _ = mlflow.run(
                 os.path.join(
                     hydra.utils.get_original_cwd(),

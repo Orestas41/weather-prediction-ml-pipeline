@@ -2,14 +2,15 @@
 This script run W&B sweep agent that retrains regression model with parameters
 in search for best performing configuration. This script is not in the pipeline
 """
+# pylint: disable=C0103
 import os
-import wandb
+import numpy as np
 import pandas as pd
 from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
-import numpy as np
+import wandb
 
 def train_model():
     """
@@ -23,14 +24,18 @@ def train_model():
     run = wandb.init(config=sweep_config)
 
     # Opening training data
-    df = pd.read_csv('data/training_data.csv')
+    dataframe = pd.read_csv('data/training_data.csv')
 
     # Setting time column as index
-    df.set_index('time', inplace=True)
+    dataframe.set_index('time', inplace=True)
 
     # Setting input and target features
-    X = df.drop(['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'], axis=1)
-    y = df[['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
+    X = dataframe.drop(['weathercode', 'temperature_2m_max',
+                'temperature_2m_min', 'precipitation_sum'], axis=1)
+    y = dataframe[['weathercode',
+            'temperature_2m_max',
+            'temperature_2m_min',
+            'precipitation_sum']]
 
     # Splitting data into training and validation sets
     X_train, X_val, y_train, y_val = train_test_split(
@@ -58,71 +63,78 @@ def train_model():
     model = XGBRegressor(**params)
 
     # Fitting
-    model.fit(X_train, y_train, eval_set=[(X_val, y_val)], early_stopping_rounds=config.early_stopping_rounds, verbose=False)
-    
+    model.fit(
+        X_train,
+        y_train,
+        eval_set=[
+            (X_val,
+             y_val)],
+        early_stopping_rounds=config.early_stopping_rounds,
+        verbose=False)
+
     # Predicting
     y_pred = model.predict(X_val)
 
     # Scoring
     r_squared = model.score(X_val, y_val)
     mae = mean_absolute_error(y_val, y_pred)
-    rmse = np.sqrt(mean_squared_error(y_val,y_pred))
+    rmse = np.sqrt(mean_squared_error(y_val, y_pred))
 
     # Logging scores to W&B
-    wandb.log({'r_squared':r_squared})
-    wandb.log({'mae':mae})
-    wandb.log({'rmse':rmse})
+    wandb.log({'r_squared': r_squared})
+    wandb.log({'mae': mae})
+    wandb.log({'rmse': rmse})
 
 
 # Setting up parameter limits
 sweep_config = {
-    'method':'random',
+    'method': 'random',
     'metric': {
-        'name':'rmse',
-        'goal':'minimize'
+        'name': 'rmse',
+        'goal': 'minimize'
     },
-    'parameters':{
-        'learning_rate':{
+    'parameters': {
+        'learning_rate': {
             'min': 0.01,
             'max': 0.1
         },
-        'max_depth':{
-            'values':[3,5,7,9]
+        'max_depth': {
+            'values': [3, 5, 7, 9]
         },
-        'subsample':{
+        'subsample': {
             'min': 0.5,
-            'max':1.0
+            'max': 1.0
         },
-        'colsample_bytree':{
-            'min':0.5,
-            'max':1.0
+        'colsample_bytree': {
+            'min': 0.5,
+            'max': 1.0
         },
-        'n_estimators':{
-            'min':100,
-            'max':500
+        'n_estimators': {
+            'min': 100,
+            'max': 500
         },
-        'early_stopping_rounds':{
-            'values': [10,20,30]
+        'early_stopping_rounds': {
+            'values': [10, 20, 30]
         },
-        'min_child_weight':{
-            'min':1,
-            'max':5
+        'min_child_weight': {
+            'min': 1,
+            'max': 5
         },
-        'gamma':{
-            'min':0.0,
-            'max':0.5
+        'gamma': {
+            'min': 0.0,
+            'max': 0.5
         },
-        'reg_alpha':{
-            'min':0.0,
-            'max':0.5
+        'reg_alpha': {
+            'min': 0.0,
+            'max': 0.5
         },
-        'reg_lambda':{
-            'min':0.0,
-            'max':0.5
+        'reg_lambda': {
+            'min': 0.0,
+            'max': 0.5
         }}}
-    
+
 # Setting up W&B sweeps
-sweep_id = wandb.sweep(sweep_config,project="weather-prediction")
+sweep_id = wandb.sweep(sweep_config, project="weather-prediction")
 
 # Initiating W&B agent
 wandb.agent(sweep_id, function=train_model)

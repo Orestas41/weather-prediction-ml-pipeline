@@ -3,23 +3,22 @@ Evaluating previous weather prediction results against real world data.
 Batch predicting the weather of last and next week
 """
 # pylint: disable=E0401, W0621, R0914, E1101, C0200, C0103, W0106, R0915
-import mlflow
-import logging
-from datetime import datetime
-import wandb
 import os
+import logging
 import tempfile
 import argparse
 from datetime import datetime, timedelta
+import mlflow
 import pandas as pd
 import matplotlib.pyplot as plt
-import yaml
+import wandb
 
 # Set up logging
 logging.basicConfig(
     filename=f"../{datetime.now().strftime('%Y-%m-%d')}.log",
     level=logging.INFO)
 LOGGER = logging.getLogger()
+
 
 def go(ARGS):
     """
@@ -46,7 +45,7 @@ def go(ARGS):
     # Downloading dataset and predictions
     full_dataset_path = run.use_artifact(ARGS.full_dataset).file()
     batch_prediction_path = run.use_artifact(ARGS.batch_prediction).file()
-    
+
     LOGGER.info("Opening latest weather data")
     latest_data = pd.read_csv(full_dataset_path)
 
@@ -62,40 +61,61 @@ def go(ARGS):
     mask = (latest_data['time'] >= start) & (latest_data['time'] <= end)
     recorded_data = latest_data.loc[mask]
 
+    # Setting up features
+    features = [
+        'weathercode',
+        'temperature_2m_max',
+        'temperature_2m_min',
+        'precipitation_sum']
+
     LOGGER.info("Setting up real and prediction data")
     # Specifying predicted data
-    predicted_data.rename(columns={'weathercode':'predicted_weathercode',
-                                   'temperature_2m_max':'predicted_temperature_2m_max',
-                                   'temperature_2m_min':'predicted_temperature_2m_min',
-                                   'precipitation_sum':'predicted_precipitation_sum'}, inplace=True)
+    for col in features:
+        predicted_data.rename(columns={col: f'predicted_{col}'}, inplace=True)
 
     # Merging real data with predictions
-    performance = pd.merge(recorded_data, predicted_data, on='time', how='outer')
+    performance = pd.merge(
+        recorded_data,
+        predicted_data,
+        on='time',
+        how='outer')
 
     LOGGER.info("Calculating prediction error")
-    for objective, real, preds in zip(['weathercode_performace','max_temp_performace','min_temp_performace','precipitation_performace'],
-                                      ['weathercode','temperature_2m_max','temperature_2m_min','precipitation_sum'],
-                                      ['predicted_weathercode','predicted_temperature_2m_max','predicted_temperature_2m_min','predicted_precipitation_sum']):
+    for objective, real, preds in zip(
+        [
+            'weathercode_performace', 'max_temp_performace',
+              'min_temp_performace', 'precipitation_performace'], [
+            'weathercode', 'temperature_2m_max', 
+            'temperature_2m_min', 'precipitation_sum'], [
+                'predicted_weathercode', 'predicted_temperature_2m_max', 
+                'predicted_temperature_2m_min', 'predicted_precipitation_sum']):
         performance[objective] = abs(performance[real] - performance[preds])
-    
-    # Dropping irrelevant columns
-    performance = performance.drop(['month-day_x','city_x','month-day_y','city_y'], axis=1)
 
-    LOGGER.info("Average Weathercode error: %s", performance['weathercode_performace'].mean())
-    LOGGER.info("Average Max temperature error: %s", performance['max_temp_performace'].mean())
-    LOGGER.info("Average Min temperature error: %s", performance['min_temp_performace'].mean())
-    LOGGER.info("Average Precipitation error: %s", performance['precipitation_performace'].mean())
-    
+    # Dropping irrelevant columns
+    performance = performance.drop(
+        ['month-day_x', 'city_x', 'month-day_y', 'city_y'], axis=1)
+
+    LOGGER.info("\n%s", performance.to_string(index=True))
+
     LOGGER.info("Setting up prediction for the next week")
 
     # Creating a date range for week past and week forward
     now = datetime.now()
-    date_rng = pd.date_range(start=now - timedelta(days=7), end=now + timedelta(days=7) , freq='D', normalize=True)
+    date_rng = pd.date_range(
+        start=now -
+        timedelta(
+            days=7),
+        end=now +
+        timedelta(
+            days=7),
+        freq='D',
+        normalize=True)
 
     # Creating an input dataframe
     prediction = pd.DataFrame(date_rng, columns=['time'])
     prediction['time'] = pd.to_datetime(prediction['time'], format='%Y-%m-%d')
-    prediction['month-day'] = prediction['time'].dt.strftime('%m.%d').astype(float)
+    prediction['month-day'] = prediction['time'].dt.strftime(
+        '%m.%d').astype(float)
     prediction.set_index('time', inplace=True)
     prediction['city'] = predicted_data['city'][0]
 
@@ -105,46 +125,37 @@ def go(ARGS):
     reg_pred = reg_model.predict(prediction)
 
     # Creating predicted columns
-    prediction['temperature_2m_max'] = 0
-    prediction['temperature_2m_min'] = 0
-    prediction['precipitation_sum'] = 0
-
-    # Adding predictions to the dataframe
-    for i in range(len(reg_pred)):
-        prediction['temperature_2m_max'][i] = reg_pred[i][0]
-        prediction['temperature_2m_min'][i] = reg_pred[i][1]
-        prediction['precipitation_sum'][i] = reg_pred[i][2]
+    prediction[['temperature_2m_max',
+                'temperature_2m_min',
+                'precipitation_sum']] = reg_pred
 
     # Reordering columns
-    prediction = prediction[['temperature_2m_max','temperature_2m_min','precipitation_sum','month-day','city']]
+    prediction = prediction[['temperature_2m_max',
+                             'temperature_2m_min',
+                             'precipitation_sum',
+                             'month-day',
+                             'city']]
 
     LOGGER.info("Predicting the weathercode")
     class_pred = class_model.predict(prediction)
 
     # Creating predicted column
-    prediction['weathercode'] = 0
-    
-    # Adding predictions to the dataframe
-    for i in range(len(class_pred)):
-        prediction['weathercode'][i] = class_pred[i]
+    prediction['weathercode'] = class_pred
 
     # Renaming predicted columns
-    prediction = prediction.rename(columns = {'temperature_2m_max':'predicted_temperature_2m_max',
-                                                'weathercode':'predicted_weathercode',
-                                                'temperature_2m_min':'predicted_temperature_2m_min',
-                                                'precipitation_sum':'predicted_precipitation_sum',})
+    for col in features:
+        prediction.rename(columns={col: f'predicted_{col}'}, inplace=True)
 
-    LOGGER.info("Average Weathercode prediction: %s", prediction['predicted_weathercode'].mean())
-    LOGGER.info("Average Max temperature prediction: %s", prediction['predicted_temperature_2m_max'].mean())
-    LOGGER.info("Average Min temperature prediction: %s", prediction['predicted_temperature_2m_min'].mean())
-    LOGGER.info("Average Precipitation prediction: %s", prediction['predicted_precipitation_sum'].mean())
+    LOGGER.info("\n%s", prediction.to_string(index=True))
 
     LOGGER.info("Plotting next weeks weather prediction")
     # Selecting the last seven days of predicted data
     next_week = prediction.tail(7)
 
-    # Calculating the average temperature range between predicted maximum and minimum temperatures
-    temperature_range = (next_week['predicted_temperature_2m_max'] + next_week['predicted_temperature_2m_min']) / 2
+    # Calculating the average temperature range between predicted maximum and
+    # minimum temperatures
+    temperature_range = (next_week['predicted_temperature_2m_max'] +
+                         next_week['predicted_temperature_2m_min']) / 2
 
     # Creating a new figure and axes for the plot
     fig, ax = plt.subplots()
@@ -152,23 +163,48 @@ def go(ARGS):
     # Creating a secondary y-axis to show precipitation data
     ax2 = ax.twinx()
 
-    # Filling the area between the predicted min and max temperatures with transparency
-    ax.fill_between(next_week.index, next_week['predicted_temperature_2m_min'], next_week['predicted_temperature_2m_max'], alpha=0.5)
+    # Filling the area between the predicted min and max temperatures with
+    # transparency
+    ax.fill_between(
+        next_week.index,
+        next_week['predicted_temperature_2m_min'],
+        next_week['predicted_temperature_2m_max'],
+        alpha=0.5)
 
     # Plotting the mean temperature using markers and a line in blue color
-    ax.plot(temperature_range, label='Mean temperature', marker='o', color='blue')
+    ax.plot(
+        temperature_range,
+        label='Mean temperature',
+        marker='o',
+        color='blue')
 
     # Plotting the predicted max temperature with red squares
-    ax.plot(next_week['predicted_temperature_2m_max'], label='Max temperature', color='red', marker='s')
+    ax.plot(next_week['predicted_temperature_2m_max'],
+            label='Max temperature', color='red', marker='s')
 
     # Plotting the predicted min temperature with blue triangles
-    ax.plot(next_week['predicted_temperature_2m_min'], label='Min temperature', color='blue', marker='^')
+    ax.plot(
+        next_week['predicted_temperature_2m_min'],
+        label='Min temperature',
+        color='blue',
+        marker='^')
 
-    # Filling the area between the predicted precipitation and 0 with cyan color and transparency
-    ax2.fill_between(next_week.index, next_week['predicted_precipitation_sum'], 0, alpha=0.5, color='cyan')
+    # Filling the area between the predicted precipitation and 0 with cyan
+    # color and transparency
+    ax2.fill_between(
+        next_week.index,
+        next_week['predicted_precipitation_sum'],
+        0,
+        alpha=0.5,
+        color='cyan')
 
-    # Plotting the predicted precipitation amount using markers and a line in cyan color
-    ax2.plot(next_week['predicted_precipitation_sum'], label='Precipitation amount', color='cyan', marker=',')
+    # Plotting the predicted precipitation amount using markers and a line in
+    # cyan color
+    ax2.plot(
+        next_week['predicted_precipitation_sum'],
+        label='Precipitation amount',
+        color='cyan',
+        marker=',')
 
     # Annotating the mean temperature values on the plot
     for x, y in zip(next_week.index, temperature_range):
@@ -198,13 +234,15 @@ def go(ARGS):
     # Logging the plot to the run
     run.log(({"plot": fig}))
 
-
-    for file_name, k, desc in zip([performance, prediction],
-                                  ['batch_prediction_performance.csv', 'batch_prediction.csv'],
-                                  ['batch_prediction_performance','batch_prediction']):
+    for file_name, k, desc in zip(
+        [
+            performance, prediction], [
+            'batch_prediction_performance.csv', 'batch_prediction.csv'], [
+                'batch_prediction_performance', 'batch_prediction']):
         LOGGER.info("Uploading %s", desc)
         with tempfile.NamedTemporaryFile("w") as file:
-            file_name.to_csv(file.name, index=True) # Saving as a temporary file
+            # Saving as a temporary file
+            file_name.to_csv(file.name, index=True)
             artifact = wandb.Artifact(
                 k,
                 type=desc,
@@ -219,23 +257,26 @@ def go(ARGS):
 
     LOGGER.info("Batch tour evaluations and predictions finished")
 
-    LOGGER.info("Uploading log file of the run")
+    LOGGER.info("Uploading log file of the run and deleting locally stored file")
     log_file = f"../{datetime.now().strftime('%Y-%m-%d')}.log"
     log_artifact = wandb.Artifact(
         "log_file",
         type="log",
         description="Log file",
     )
-    log_artifact.add_file(log_file)
-    run.log_artifact(log_artifact)
-    
-    # Removing locally saved log file
-    os.remove(f"../{datetime.now().strftime('%Y-%m-%d')}.log")
+    if not os.getenv('TESTING'):
+        log_artifact.add_file(log_file)
+        run.log_artifact(log_artifact)
+        # Removing locally saved log file
+        os.remove(f"../{datetime.now().strftime('%Y-%m-%d')}.log")
+    else:
+        pass
+
 
 if __name__ == "__main__":
 
     PARSER = argparse.ArgumentParser(
-        description="This step evaluates the predictions made previously by comparing them with the real data and makes new predictions for next week")
+        description="Evaluate predictions made previously with the real data, make new predictions")
 
     PARSER.add_argument(
         "--reg_model",

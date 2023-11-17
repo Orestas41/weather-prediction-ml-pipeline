@@ -7,13 +7,13 @@ import os
 import shutil
 import logging
 from datetime import datetime
-import mlflow
-import numpy as np
-import wandb
 import tempfile
 import argparse
+import numpy as np
+import mlflow
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
+import wandb
 
 # Set up logging
 logging.basicConfig(
@@ -38,7 +38,8 @@ def go(ARGS):
     )
     # Downloading test dataset
     test_dataset_path = run.use_artifact(ARGS.test_dataset).file()
-    performance_records_path = run.use_artifact(ARGS.performance_records).file()
+    performance_records_path = run.use_artifact(
+        ARGS.performance_records).file()
 
     # Setting the file path of temporary stored models
     reg_model_local_path = '../reg_model_dir'
@@ -51,8 +52,13 @@ def go(ARGS):
     df.set_index('time', inplace=True)
 
     LOGGER.info("Setting feature and target columns")
-    reg_X_test = df.drop(['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'], axis=1)
-    reg_y_test = df[['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
+    reg_X_test = df.drop(['weathercode',
+                          'temperature_2m_max',
+                          'temperature_2m_min',
+                          'precipitation_sum'],
+                         axis=1)
+    reg_y_test = df[['temperature_2m_max',
+                     'temperature_2m_min', 'precipitation_sum']]
 
     class_X_test = df.drop(['weathercode'], axis=1)
     class_y_test = df[['weathercode']]
@@ -107,27 +113,30 @@ def go(ARGS):
     LOGGER.info(
         "Saving the latest model performance metrics")
     date = datetime.now().strftime('%Y-%m-%d')
-    new = {'Date':date, 'Score':total_r_squared, 'MAE':total_mae}
+    new = {'Date': date, 'Score': total_r_squared, 'MAE': total_mae}
     new = pd.DataFrame([new])
     new.set_index('Date', inplace=True)
-    perf = pd.concat([perf,new])
+    perf = pd.concat([perf, new])
     perf = perf.drop_duplicates()
-    LOGGER.info("\n" + perf.to_string(index=True))
+    LOGGER.info("\n%s", perf.to_string(index=True))
 
     LOGGER.info(
         "Checking if the new model is performing better than previous models")
     # If the MAE score of the latest model is smaller (better performance) than
     # any other models MAE, then this model is promoted as a production model
-    if total_mae <= perf['MAE'].min() or raw_comp or param_signific or nonparam:
-        alias = ['latest','prod']
-        LOGGER.info("Model has the best performance. Uploading as the production model")
+    if total_mae <= perf['MAE'].min(
+    ) or raw_comp or param_signific or nonparam:
+        alias = ['latest', 'prod']
+        LOGGER.info(
+            "Model has the best performance. Uploading as the production model")
     else:
         alias = ['latest']
-        LOGGER.info("Model did not perform better than production model. Uploading as the latest model")
-    
+        LOGGER.info(
+            "Model did not perform better than production model. Uploading as the latest model")
+
     for n, name, path in zip(['reg', 'class'],
-                                ['Regression','Classification'],
-                                [reg_model_local_path,class_model_local_path]):
+                             ['Regression', 'Classification'],
+                             [reg_model_local_path, class_model_local_path]):
         artifact = wandb.Artifact(
             f'{n}_model',
             type='model_export',
@@ -156,15 +165,22 @@ def go(ARGS):
             pass
 
     # Logging MAE and r2
-    for name, metric in zip(['reg_mae','class_mae','total_mae','reg_r2','class_r2','total_r2','Raw comparison','Parametric significance','Non-parametric outlier'],
-                            [reg_mae, class_mae, total_mae, reg_r_squared, class_r_squared, total_r_squared, raw_comp, param_signific, nonparam]):
+    for name, metric in zip(['reg_mae', 'class_mae', 'total_mae',
+                             'reg_r2', 'class_r2', 'total_r2',
+                             'Raw comparison', 'Parametric significance', 'Non-parametric outlier'],
+                            [reg_mae, class_mae, total_mae,
+                             reg_r_squared, class_r_squared, total_r_squared,
+                             raw_comp, param_signific, nonparam]):
         run.summary[name] = metric
 
     LOGGER.info("Model testing finished")
 
     # Removing locally saved models
-    for path in ['../reg_model_dir','../class_model_dir']:
-        shutil.rmtree(path)
+    if not os.getenv('TESTING'):
+        for path in ['../reg_model_dir', '../class_model_dir']:
+            shutil.rmtree(path)
+    else:
+        pass
 
     # Finish the run
     run.finish()

@@ -1,11 +1,12 @@
-import pytest
+"""
+This test script tests the go function from model_test step
+"""
+# pylint: disable=E0401, C0413, W0621
+import os
+import sys
 from unittest.mock import patch, MagicMock
 import pandas as pd
-import os
-import json
-import tempfile
-from datetime import datetime
-import sys
+import pytest
 
 # Add the path to the directory containing the script you want to test
 sys.path.append("/home/orestas41/weather-prediction-ml-pipeline/model_test")
@@ -15,50 +16,69 @@ from run import go
 
 @pytest.fixture
 def mock_wandb():
+    """Mock wandb connection"""
     with patch('run.wandb.init') as mock_wandb_init:
         yield mock_wandb_init
 
+
 @pytest.fixture
 def mock_model():
+    """Mock model"""
     with patch('run.mlflow.sklearn.load_model') as mock_load_model:
         yield mock_load_model
 
-def test_go(mock_wandb, mock_model):
-    # Set up test data
+
+@pytest.fixture
+def mock_mae():
+    """Mock mean absolute error calculation"""
+    with patch('run.mean_absolute_error') as mock_mae:
+        yield mock_mae
+
+
+def test_go(mock_wandb, mock_model, mock_mae):
+    """Test go function"""
+    # Setting up test environment
     os.environ['TESTING'] = '1'
 
+    # Setting up arguments
     args = MagicMock()
     args.reg_model = "reg_model"
     args.class_model = 'class_model'
     args.test_dataset = "tests/mock_data.csv"
+    args.performance_records = 'model_performance.csv:latest'
 
+    # Mock wandb run
     mock_run = MagicMock()
     mock_wandb.return_value = mock_run
 
-    mock_artifact = MagicMock()
-    mock_artifact.file.return_value = "tests/mock_data.csv"
-    mock_run.use_artifact.return_value = mock_artifact
+    # Mock test data
+    mock_reg_artifact = MagicMock()
+    mock_class_artifact = MagicMock()
+    mock_reg_artifact.file.return_value = "tests/mock_data.csv"
+    mock_class_artifact.file.return_value = "tests/mock_perf.csv"
+    mock_run.use_artifact.side_effect = [
+        mock_reg_artifact, mock_class_artifact]
 
-    # Mock the mlflow.sklearn.load_model function
-    model = MagicMock()
-    mock_model.return_value = model
-    mock_model = MagicMock()
-    mock_model.return_value = model
+    # Mock models
+    mock_reg_model = MagicMock()
+    mock_class_model = MagicMock()
+    mock_model.side_effect = [mock_reg_model, mock_class_model]
 
-    data = pd.read_csv('tests/mock_data.csv')
+    # Mock data
+    data = pd.read_csv("tests/mock_data.csv")
+    data.set_index('time', inplace=True)
 
-    model.predict.return_value = data[['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
-    model.predict.return_value = data['weathercode']
-    
-    model.score.return_value = 1.1
+    # Set return values for predictions
+    mock_reg_model.predict.return_value = data[[
+        'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum']]
+    mock_class_model.predict.return_value = data['weathercode']
 
-    #
-    model.score.return_value = 1.1
+    # Set return values for model score
+    mock_reg_model.score.return_value = 1.1
+    mock_class_model.score.return_value = 1.1
+
+    # Set return values for mean absolute error
+    mock_mae.return_value = 1.1
 
     # Run the function
     go(args)
-
-    # Assertions
-    assert mock_run.use_artifact.called_with("your_test_dataset")
-    assert mock_mlflow.called_with("your_mlflow_model")
-    assert mock_model.predict.called  # Add more assertions based on your specific implementation
