@@ -8,8 +8,9 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 # Add the path to the directory containing the script you want to test
+main_path = os.getcwd()
 sys.path.append(
-    "/home/orestas41/weather-prediction-ml-pipeline/batch_prediction")
+    f"{main_path}/batch_prediction")
 
 # Import the function to be tested
 from run import go
@@ -37,8 +38,6 @@ def test_go(mock_wandb, mock_mlflow):
     args = MagicMock()
     args.reg_model = "reg_model:prod"
     args.class_model = "class_model:prod"
-    args.full_dataset = 'tests/mock_data.csv'
-    args.batch_prediction = "batch_prediction.csv:latest"
 
     # Mock wandb run
     mock_run = MagicMock()
@@ -61,14 +60,7 @@ def test_go(mock_wandb, mock_mlflow):
                  [5.5, 0.5, 5.5],
                  [6.6, 0.6, 6.6],
                  [7.7, 0.7, 7.7],
-                 [8.8, 0.8, 8.8],
-                 [9.9, 0.9, 9.9],
-                 [10.10, 0.10, 10.10],
-                 [11.11, 0.11, 11.11],
-                 [12.12, 0.12, 12.12],
-                 [13.13, 0.13, 13.13],
-                 [14.14, 0.14, 14.14],
-                 [15.15, 0.15, 15.15]]
+                 [8.8, 0.8, 8.8]]
 
     # Using mock predictions in the script
     mock_model.predict.return_value = reg_preds

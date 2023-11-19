@@ -12,12 +12,4 @@ entry_points:
         description: An MLflow serialized Classification model for predicting weathercodes
         type: string
 
-      full_dataset:
-        description: Full training dataset with the latest data
-        type: string
-
-      batch_prediction:
-        description: Weather prediction produced on the last run
-        type: string
-
-    command: "python run.py --reg_model {reg_model} --class_model {class_model} --full_dataset {full_dataset} --batch_prediction {batch_prediction}"
+    command: "python run.py --reg_model {reg_model} --class_model {class_model}"

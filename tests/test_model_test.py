@@ -9,7 +9,9 @@ import pandas as pd
 import pytest
 
 # Add the path to the directory containing the script you want to test
-sys.path.append("/home/orestas41/weather-prediction-ml-pipeline/model_test")
+main_path = os.getcwd()
+sys.path.append(
+    f"{main_path}/model_test")
 
 # Import the function to be tested
 from run import go

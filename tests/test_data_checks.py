@@ -2,13 +2,16 @@
 This test script tests the pytest functions from data_checks step
 """
 # pylint: disable=E0601, E0401, W0621, C0413, W0613
+import os
 import sys
 from unittest.mock import patch, MagicMock, call
 import pandas as pd
 import pytest
 
 # Add the path to the directory containing the script you want to test
-sys.path.append("/home/orestas41/weather-prediction-ml-pipeline/data_checks")
+main_path = os.getcwd()
+sys.path.append(
+    f"{main_path}/data_checks")
 
 # Import the module you want to test
 from conftest import pytest_addoption

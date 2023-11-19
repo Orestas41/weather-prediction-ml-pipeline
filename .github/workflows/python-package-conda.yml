@@ -23,5 +23,11 @@ jobs:
         conda env update --file environment.yml
     - name: Test with pytest
       run: |
-        conda install pytest pandas
-        pytest tests
+        conda activate weather-prediction
+        pytest tests/data_ingestion
+        pytest tests/pre-processing
+        pytest tests/data_checks
+        pytest tests/data_segregation
+        pytest tests/training_validation
+        pytest tests/model_test
+        pytest tests/batch_prediction

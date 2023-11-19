@@ -4,11 +4,6 @@ This script runs data tests
 # pylint: disable=E0401, E1101
 import scipy.stats
 import pandas as pd
-import wandb
-
-RUN = wandb.init(
-    job_type="data_check")
-
 
 def test_format(data):
     """

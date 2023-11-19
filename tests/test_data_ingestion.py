@@ -11,8 +11,9 @@ import pandas as pd
 import pytest
 
 # Add the path to the directory containing the script you want to test
+main_path = os.getcwd()
 sys.path.append(
-    "/home/orestas41/weather-prediction-ml-pipeline/data_ingestion")
+    f"{main_path}/data_ingestion")
 
 # Import the function to be tested
 from run import go
@@ -45,7 +46,7 @@ def mock_read():
         yield mock_read
 
 
-def test_go(mock_http_client, mock_wandb, mock_date):
+def test_go(mock_http_client, mock_wandb, mock_date, mock_read):
     """Test go function"""
     # Setting up test environment
     os.environ['TESTING'] = '1'
@@ -73,10 +74,9 @@ def test_go(mock_http_client, mock_wandb, mock_date):
     mock_conn_instance.getresponse.return_value = mock_res
 
     # Mock ingestion records
-    mock_read = MagicMock()
     mock_records = pd.DataFrame(
         {'Date': ['2023-01-01'], 'Start': ['2023-01-01'], 'End': ['2023-01-01']})
-    mock_read.read_csv.return_value = mock_records
+    mock_read.return_value = mock_records
 
     # Mock the current date
     date = datetime(2023, 1, 1)

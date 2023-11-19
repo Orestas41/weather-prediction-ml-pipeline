@@ -136,9 +136,7 @@ def go(config: DictConfig):
                 "main",
                 parameters={
                     "reg_model": "reg_model:prod",
-                    "class_model": "class_model:prod",
-                    "full_dataset": "training_data.csv:latest",
-                    "batch_prediction": "batch_prediction.csv:latest"
+                    "class_model": "class_model:prod"
                 },
             )
 
