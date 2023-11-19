@@ -7,23 +7,22 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       max-parallel: 5
-
+      
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.11.5
-      uses: actions/setup-python@v3
+    - name: Set up conda
+      uses: conda-incubator/setup-miniconda@v2
       with:
+        miniconda-version: "latest"
+        environment-file: environment.yml
         python-version: '3.11.5'
-    - name: Add conda to system path
-      run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        echo $CONDA/bin >> $GITHUB_PATH
-    - name: Install dependencies
-      run: |
-        conda env update --file environment.yml
+        channels: conda-forge, defaults
+        use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+        auto-update-conda: true
+        activate-environment: weather-prediction
     - name: Test with pytest
+      shell: bash -l {0} # IMPORTANT: Use login shell to ensure conda is initialized properly
       run: |
-        conda activate weather-prediction
         pytest tests/data_ingestion
         pytest tests/pre-processing
         pytest tests/data_checks
@@ -31,3 +30,4 @@ jobs:
         pytest tests/training_validation
         pytest tests/model_test
         pytest tests/batch_prediction
+
