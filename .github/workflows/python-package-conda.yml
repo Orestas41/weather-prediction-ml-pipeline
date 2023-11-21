@@ -23,11 +23,11 @@ jobs:
     - name: Test with pytest
       shell: bash -l {0} # IMPORTANT: Use login shell to ensure conda is initialized properly
       run: |
-        pytest tests/data_ingestion
-        pytest tests/pre-processing
-        pytest tests/data_checks
-        pytest tests/data_segregation
-        pytest tests/training_validation
-        pytest tests/model_test
-        pytest tests/batch_prediction
+        pytest tests/test_data_ingestion.py
+        pytest tests/test_pre-processing.py
+        pytest tests/test_data_checks.py
+        pytest tests/test_data_segregation.py
+        pytest tests/test_training_validation.py
+        pytest tests/test_model_test.py
+        pytest tests/test_batch_prediction.py
 

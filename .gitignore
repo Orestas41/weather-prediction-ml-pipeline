@@ -78,6 +78,9 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Dockerfile
+Dockerfile
+
 # pyenv
 .python-version
 

@@ -1,6 +1,6 @@
 main:
   project_name: weather-prediction
-  experiment_name: development
+  experiment_name: production
   steps: all
 data_ingestion:
   hostname: archive-api.open-meteo.com
