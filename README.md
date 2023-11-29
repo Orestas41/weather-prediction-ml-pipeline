@@ -4,7 +4,7 @@
 
 ## Overview
 
-This machine learning pipeline trains a model that aims to predict temperature and precipitation for 10 major cities in UK. The pipeline pulls data from API, process and tests it, trains and test a model and makes a batch prediction for next weeks weather. The trained model is then used to provide predictions using API requests.
+This machine learning pipeline trains a model that aims to predict temperature and precipitation for 10 major cities in the UK. The pipeline pulls data from API, processes and tests it, trains and test a model and makes a batch prediction for next weeks weather.
 
 ## Table of contents
 
